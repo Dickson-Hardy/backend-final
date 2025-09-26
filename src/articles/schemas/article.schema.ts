@@ -43,8 +43,20 @@ export class Article {
   @Prop({ type: String, enum: ArticleStatus, default: ArticleStatus.DRAFT })
   status: ArticleStatus
 
-  @Prop([{ type: Types.ObjectId, ref: "User" }])
-  authors: Types.ObjectId[]
+  @Prop([{
+    title: { type: String, required: false },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true },
+    affiliation: { type: String, required: true }
+  }])
+  authors: Array<{
+    title?: string
+    firstName: string
+    lastName: string
+    email: string
+    affiliation: string
+  }>
 
   @Prop({ type: Types.ObjectId, ref: "User" })
   correspondingAuthor: Types.ObjectId

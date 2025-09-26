@@ -30,6 +30,8 @@ export class UploadService {
         bytes: result.bytes,
         width: result.width,
         height: result.height,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
       }
     } catch (error) {
       this.logger.error(`File upload failed: ${error.message}`)

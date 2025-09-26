@@ -47,7 +47,8 @@ export class ArticlesService {
 
     const article = new this.articleModel({
       ...createArticleDto,
-      authors: [authorId],
+      authors: createArticleDto.authors, // Store full author objects instead of just IDs
+      correspondingAuthor: authorId, // Keep the corresponding author as user ID
       manuscriptFile: manuscriptUpload,
       supplementaryFiles,
       status: articleStatus,
@@ -61,7 +62,7 @@ export class ArticlesService {
     // Send confirmation email to author
     await this.emailService.sendSubmissionConfirmation(authorId, savedArticle.authors[0].toString(), savedArticle.title, savedArticle._id.toString())
     
-    return savedArticle.populate('authors', 'firstName lastName email')
+    return savedArticle
   }
 
   async findAll(
@@ -144,7 +145,6 @@ export class ArticlesService {
   async findFeatured(): Promise<Article[]> {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED, featured: true })
-      .populate('authors', 'firstName lastName email')
       .populate('volume', 'number year title')
       .sort({ publishedDate: -1 })
       .limit(6)
@@ -154,7 +154,6 @@ export class ArticlesService {
   async findRecent(limit: number = 5): Promise<Article[]> {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED })
-      .populate('authors', 'firstName lastName email')
       .populate('volume', 'number year title')
       .sort({ publishedDate: -1 })
       .limit(limit)
@@ -186,22 +185,32 @@ export class ArticlesService {
 
 
   async findByVolumeAndArticleNumber(volumeNumber: number, articleNumber: string): Promise<Article> {
+    console.log('📝 Finding article:', { volumeNumber, articleNumber })
+    
     const article = await this.articleModel
       .findOne({
-        articleNumber: articleNumber,
-        status: ArticleStatus.PUBLISHED
+        articleNumber: articleNumber
       })
       .populate('authors', 'firstName lastName email affiliation')
       .populate('volume', 'volume title year')
       .exec()
+
+    console.log('📝 Found article:', article ? { id: article._id, title: article.title, status: article.status, volume: article.volume } : 'null')
 
     if (!article) {
       throw new NotFoundException('Article not found')
     }
 
     // Verify the article belongs to the specified volume
-    if (article.volume && typeof article.volume === 'object' && 'volume' in article.volume && (article.volume as any).volume !== volumeNumber) {
-      throw new NotFoundException('Article not found in specified volume')
+    if (article.volume && typeof article.volume === 'object' && 'volume' in article.volume) {
+      const articleVolumeNumber = (article.volume as any).volume
+      console.log('📝 Comparing volume numbers:', { requested: volumeNumber, articleVolume: articleVolumeNumber })
+      if (articleVolumeNumber !== volumeNumber) {
+        throw new NotFoundException(`Article not found in specified volume. Article belongs to volume ${articleVolumeNumber}, requested volume ${volumeNumber}`)
+      }
+    } else {
+      console.log('📝 Article volume not populated or invalid:', article.volume)
+      throw new NotFoundException('Article volume information not available')
     }
 
     return article
@@ -212,7 +221,6 @@ export class ArticlesService {
       .find({
         status: ArticleStatus.PUBLISHED
       })
-      .populate('authors', 'firstName lastName email affiliation')
       .populate('volume', 'volume title year')
       .exec()
       .then(articles => articles.filter(article => 
@@ -223,7 +231,6 @@ export class ArticlesService {
   async findOne(id: string): Promise<Article> {
     const article = await this.articleModel
       .findById(id)
-      .populate('authors', 'firstName lastName email affiliation')
       .populate('assignedReviewers', 'firstName lastName email')
       .populate('volume', 'volume year title')
       .exec()

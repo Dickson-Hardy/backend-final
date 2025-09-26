@@ -11,19 +11,29 @@ export enum ArticleType {
 }
 
 export class AuthorDto {
-  @ApiProperty({ description: 'Author name' })
+  @ApiProperty({ description: 'Author title (Dr., Prof., etc.)', required: false })
+  @IsOptional()
+  @IsString()
+  title?: string
+
+  @ApiProperty({ description: 'Author first name' })
   @IsString()
   @IsNotEmpty()
-  name: string
+  firstName: string
+
+  @ApiProperty({ description: 'Author last name' })
+  @IsString()
+  @IsNotEmpty()
+  lastName: string
 
   @ApiProperty({ description: 'Author email' })
   @IsEmail()
   email: string
 
-  @ApiProperty({ description: 'Author affiliation', required: false })
-  @IsOptional()
+  @ApiProperty({ description: 'Author affiliation' })
   @IsString()
-  affiliation?: string
+  @IsNotEmpty()
+  affiliation: string
 }
 
 export class CreateArticleDto {
