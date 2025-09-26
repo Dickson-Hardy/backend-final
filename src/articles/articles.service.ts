@@ -110,7 +110,7 @@ export class ArticlesService {
   async findPublished(
     page: number = 1,
     limit: number = 10,
-    filters: { category?: string; featured?: boolean } = {}
+    filters: { category?: string; featured?: boolean; search?: string } = {}
   ) {
     const skip = (page - 1) * limit
     const query: any = { status: ArticleStatus.PUBLISHED }
@@ -120,6 +120,13 @@ export class ArticlesService {
     }
     if (filters.featured !== undefined) {
       query.featured = filters.featured
+    }
+    if (filters.search) {
+      query.$or = [
+        { title: { $regex: filters.search, $options: 'i' } },
+        { abstract: { $regex: filters.search, $options: 'i' } },
+        { keywords: { $in: [new RegExp(filters.search, 'i')] } },
+      ]
     }
 
     const [articles, total] = await Promise.all([
