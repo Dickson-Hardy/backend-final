@@ -85,11 +85,12 @@ export class ArticlesController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('category') category?: string,
-    @Query('featured') featured?: string
+    @Query('featured') featured?: string,
+    @Query('search') search?: string
   ) {
     const pageNum = parseInt(page, 10)
     const limitNum = parseInt(limit, 10)
-    return this.articlesService.findPublished(pageNum, limitNum, { category, featured: featured === 'true' })
+    return this.articlesService.findPublished(pageNum, limitNum, { category, featured: featured === 'true', search })
   }
 
   @Get('featured')
