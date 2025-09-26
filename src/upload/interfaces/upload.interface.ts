@@ -6,6 +6,8 @@ export interface UploadResult {
   bytes: number
   width?: number
   height?: number
+  originalName?: string
+  mimeType?: string
 }
 
 export interface FileUploadOptions {

@@ -121,13 +121,17 @@ export class VolumesService {
   async getVolumeArticles(id: string): Promise<any[]> {
     const volume = await this.volumeModel
       .findById(id)
-      .populate('articles')
+      .populate({
+        path: 'articles',
+        select: 'title abstract authors submissionDate status categories type keywords'
+      })
       .exec()
     
     if (!volume) {
       throw new NotFoundException(`Volume with ID ${id} not found`)
     }
     
+    console.log('📝 Volume articles populated:', volume.articles)
     return volume.articles || []
   }
 
