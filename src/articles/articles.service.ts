@@ -112,14 +112,17 @@ export class ArticlesService {
     limit: number = 10,
     filters: { category?: string; featured?: boolean; search?: string } = {}
   ) {
+    console.log('🔍 findPublished called with:', { page, limit, filters })
+    console.log('🔍 ArticleStatus.PUBLISHED value:', ArticleStatus.PUBLISHED)
+    
     const skip = (page - 1) * limit
     const query: any = { status: ArticleStatus.PUBLISHED }
 
     if (filters.category) {
       query.category = filters.category
     }
-    if (filters.featured !== undefined) {
-      query.featured = filters.featured
+    if (filters.featured === true) {
+      query.featured = true
     }
     if (filters.search) {
       query.$or = [
@@ -128,6 +131,12 @@ export class ArticlesService {
         { keywords: { $in: [new RegExp(filters.search, 'i')] } },
       ]
     }
+
+    console.log('🔍 Final query:', JSON.stringify(query))
+
+    // First, let's check what articles exist with any status
+    const allArticles = await this.articleModel.find({}).select('title status').exec()
+    console.log('🔍 All articles in database:', allArticles.map(a => ({ title: a.title, status: a.status })))
 
     const [articles, total] = await Promise.all([
       this.articleModel
@@ -140,6 +149,9 @@ export class ArticlesService {
         .exec(),
       this.articleModel.countDocuments(query),
     ])
+
+    console.log('🔍 Found articles:', articles.length)
+    console.log('🔍 Total count:', total)
 
     return {
       articles,

@@ -119,6 +119,18 @@ export class VolumesService {
   }
 
   async getVolumeArticles(id: string): Promise<any[]> {
+    console.log('🚀 getVolumeArticles called with ID:', id)
+    // First get the raw volume to see what's in the articles field
+    const rawVolume = await this.volumeModel.findById(id).exec()
+    if (!rawVolume) {
+      throw new NotFoundException(`Volume with ID ${id} not found`)
+    }
+    
+    console.log('📝 Raw volume articles:', rawVolume.articles)
+    console.log('📝 Articles field type:', typeof rawVolume.articles)
+    console.log('📝 First article type:', rawVolume.articles?.[0] ? typeof rawVolume.articles[0] : 'none')
+    
+    // Try to populate the articles
     const volume = await this.volumeModel
       .findById(id)
       .populate({
@@ -127,11 +139,22 @@ export class VolumesService {
       })
       .exec()
     
-    if (!volume) {
-      throw new NotFoundException(`Volume with ID ${id} not found`)
+    console.log('📝 Volume articles after populate:', volume.articles)
+    console.log('📝 First populated article:', volume.articles?.[0])
+    
+    // If populate didn't work, manually fetch the articles
+    if (volume.articles && volume.articles.length > 0 && typeof volume.articles[0] === 'string') {
+      console.log('📝 Articles are strings, manually fetching...')
+      const articleIds = volume.articles as any[]
+      const articles = await this.articleModel
+        .find({ _id: { $in: articleIds } })
+        .select('title abstract authors submissionDate status categories type keywords')
+        .exec()
+      
+      console.log('📝 Manually fetched articles:', articles)
+      return articles
     }
     
-    console.log('📝 Volume articles populated:', volume.articles)
     return volume.articles || []
   }
 
