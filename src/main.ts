@@ -1,7 +1,6 @@
 import { NestFactory } from "@nestjs/core"
 import { ValidationPipe } from "@nestjs/common"
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
-import * as express from "express"
 import { AppModule } from "./app.module"
 
 async function bootstrap() {
@@ -13,9 +12,8 @@ async function bootstrap() {
     credentials: true,
   })
 
-  // Ensure JSON parsing
-  app.use(express.json())
-  app.use(express.urlencoded({ extended: true }))
+  // NestJS automatically handles JSON parsing, but we can configure it if needed
+  // The express middleware is handled internally by NestJS
 
   // Global validation pipe
   app.useGlobalPipes(
