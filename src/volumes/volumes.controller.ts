@@ -48,6 +48,13 @@ export class VolumesController {
     return this.volumesService.findRecent(limit);
   }
 
+  @Get('test')
+  @ApiOperation({ summary: 'Test route' })
+  @ApiResponse({ status: 200, description: 'Test response' })
+  test() {
+    return { message: 'Test route working', timestamp: new Date().toISOString() };
+  }
+
   @Get('titles')
   @ApiOperation({ summary: 'Get volume titles' })
   @ApiResponse({ status: 200, description: 'List of volume titles' })
@@ -62,21 +69,21 @@ export class VolumesController {
     return this.volumesService.findByNumber(parseInt(volumeNumber, 10));
   }
 
-  @Get(':id/articles')
+  @Get(':id([0-9a-fA-F]{24})/articles')
   @ApiOperation({ summary: 'Get articles for volume' })
   @ApiResponse({ status: 200, description: 'List of articles in volume' })
   getVolumeArticles(@Param('id') id: string) {
     return this.volumesService.getVolumeArticles(id);
   }
 
-  @Get(':id')
+  @Get(':id([0-9a-fA-F]{24})')
   @ApiOperation({ summary: 'Get volume by ID' })
   @ApiResponse({ status: 200, description: 'Volume details' })
   findOne(@Param('id') id: string) {
     return this.volumesService.findOne(id);
   }
 
-  @Patch(":id")
+  @Patch(":id([0-9a-fA-F]{24})")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF)
   @ApiBearerAuth()
@@ -86,7 +93,7 @@ export class VolumesController {
     return this.volumesService.update(id, updateVolumeDto)
   }
 
-  @Patch(':id/status')
+  @Patch(':id([0-9a-fA-F]{24})/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF)
   @ApiBearerAuth()
@@ -96,7 +103,7 @@ export class VolumesController {
     return this.volumesService.update(id, { status: body.status as any })
   }
 
-  @Delete(':id')
+  @Delete(':id([0-9a-fA-F]{24})')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
@@ -106,19 +113,19 @@ export class VolumesController {
     return this.volumesService.remove(id);
   }
 
-  @Post(':id/view')
+  @Post(':id([0-9a-fA-F]{24})/view')
   @ApiOperation({ summary: 'Increment volume view count' })
   incrementViewCount(@Param('id') id: string) {
     return this.volumesService.incrementViewCount(id);
   }
 
-  @Post(':id/download')
+  @Post(':id([0-9a-fA-F]{24})/download')
   @ApiOperation({ summary: 'Increment volume download count' })
   incrementDownloadCount(@Param('id') id: string) {
     return this.volumesService.incrementDownloadCount(id);
   }
 
-  @Post(':id/articles')
+  @Post(':id([0-9a-fA-F]{24})/articles')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF)
   @ApiBearerAuth()
@@ -133,7 +140,7 @@ export class VolumesController {
     }
   }
 
-  @Delete(':id/articles/:articleId')
+  @Delete(':id([0-9a-fA-F]{24})/articles/:articleId([0-9a-fA-F]{24})')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF)
   @ApiBearerAuth()
