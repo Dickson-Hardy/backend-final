@@ -55,6 +55,13 @@ export class VolumesController {
     return this.volumesService.getTitles();
   }
 
+  @Get('number/:volumeNumber')
+  @ApiOperation({ summary: 'Get volume by number' })
+  @ApiResponse({ status: 200, description: 'Volume details by number' })
+  findByNumber(@Param('volumeNumber') volumeNumber: string) {
+    return this.volumesService.findByNumber(parseInt(volumeNumber, 10));
+  }
+
   @Get(':id/articles')
   @ApiOperation({ summary: 'Get articles for volume' })
   @ApiResponse({ status: 200, description: 'List of articles in volume' })
