@@ -183,6 +183,7 @@ export class EmailService {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
+              ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Welcome to AMHSJ</h1>
               <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine & Health Sciences Journal</p>
               <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 14px;">Peer-Reviewed Medical Research Platform</p>
@@ -254,6 +255,7 @@ export class EmailService {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
+              ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">📧 Verify Your Email</h1>
               <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">AMHSJ Account Verification</p>
             </div>
@@ -345,6 +347,7 @@ export class EmailService {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
+              ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">✅ Submission Confirmed</h1>
               <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">AMHSJ Manuscript Submission</p>
             </div>
@@ -1085,6 +1088,7 @@ export class EmailService {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
+              ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">📰 AMHSJ Newsletter</h1>
               <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine & Health Sciences Journal</p>
               <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 14px;">Latest Research & Updates</p>
@@ -1129,5 +1133,14 @@ export class EmailService {
       `,
       text: `AMHSJ Newsletter\n\n${content.replace(/<[^>]*>/g, "")}\n\nStay connected:\n- Website: ${this.configService.get("FRONTEND_URL")}\n- Submit research: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/new\n- Become a reviewer: ${this.configService.get("FRONTEND_URL")}/become-reviewer\n\nUnsubscribe: ${this.configService.get("FRONTEND_URL")}/newsletter/unsubscribe`,
     }
+  }
+
+  private getLogoHtml(): string {
+    const frontendUrl = this.configService.get("FRONTEND_URL") || "http://localhost:3000"
+    return `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="${frontendUrl}/logo.png" alt="AMHSJ Logo" style="width: 64px; height: 64px; object-fit: contain;" />
+      </div>
+    `
   }
 }
