@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import { Model } from "mongoose"
+import { Model, Types } from "mongoose"
 import { Volume, VolumeDocument } from "./schemas/volume.schema"
 import { Article, ArticleDocument } from "../articles/schemas/article.schema"
 import type { CreateVolumeDto } from "./dto/create-volume.dto"
@@ -52,6 +52,11 @@ export class VolumesService {
   }
 
   async findOne(id: string): Promise<Volume> {
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     const volume = await this.volumeModel
       .findById(id)
       .populate("articles")
@@ -85,6 +90,11 @@ export class VolumesService {
   }
 
   async update(id: string, updateVolumeDto: UpdateVolumeDto): Promise<Volume> {
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     const updatedVolume = await this.volumeModel
       .findByIdAndUpdate(id, updateVolumeDto, { new: true })
       .populate("articles")
@@ -99,6 +109,11 @@ export class VolumesService {
   }
 
   async remove(id: string): Promise<void> {
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     const result = await this.volumeModel.findByIdAndDelete(id).exec()
     if (!result) {
       throw new NotFoundException(`Volume with ID ${id} not found`)
@@ -106,10 +121,20 @@ export class VolumesService {
   }
 
   async incrementViewCount(id: string): Promise<void> {
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     await this.volumeModel.findByIdAndUpdate(id, { $inc: { viewCount: 1 } })
   }
 
   async incrementDownloadCount(id: string): Promise<void> {
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     await this.volumeModel.findByIdAndUpdate(id, { $inc: { downloadCount: 1 } })
   }
 
@@ -118,8 +143,28 @@ export class VolumesService {
     return volumes.map(volume => volume.title)
   }
 
+  async findByNumber(volumeNumber: number): Promise<Volume> {
+    const volume = await this.volumeModel
+      .findOne({ volume: volumeNumber })
+      .populate("articles")
+      .populate("editor", "firstName lastName email")
+      .exec()
+
+    if (!volume) {
+      throw new NotFoundException(`Volume with number ${volumeNumber} not found`)
+    }
+
+    return volume
+  }
+
   async getVolumeArticles(id: string): Promise<any[]> {
     console.log('🚀 getVolumeArticles called with ID:', id)
+    
+    // Validate the ObjectId
+    if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid volume ID: ${id}`)
+    }
+    
     // First get the raw volume to see what's in the articles field
     const rawVolume = await this.volumeModel.findById(id).exec()
     if (!rawVolume) {
@@ -161,6 +206,18 @@ export class VolumesService {
   async assignArticles(volumeId: string, articleIds: string[]): Promise<Volume> {
     console.log('📝 Assigning articles:', { volumeId, articleIds })
     
+    // Validate the volume ObjectId
+    if (!volumeId || volumeId === 'undefined' || volumeId === 'null' || !Types.ObjectId.isValid(volumeId)) {
+      throw new BadRequestException(`Invalid volume ID: ${volumeId}`)
+    }
+    
+    // Validate article ObjectIds
+    for (const articleId of articleIds) {
+      if (!articleId || articleId === 'undefined' || articleId === 'null' || !Types.ObjectId.isValid(articleId)) {
+        throw new BadRequestException(`Invalid article ID: ${articleId}`)
+      }
+    }
+    
     try {
       const volume = await this.volumeModel.findById(volumeId)
       if (!volume) {
@@ -201,8 +258,14 @@ export class VolumesService {
   }
 
   async removeArticle(volumeId: string, articleId: string): Promise<Volume> {
-    if (!articleId || articleId === 'undefined') {
-      throw new NotFoundException('Article ID is required')
+    // Validate the volume ObjectId
+    if (!volumeId || volumeId === 'undefined' || volumeId === 'null' || !Types.ObjectId.isValid(volumeId)) {
+      throw new BadRequestException(`Invalid volume ID: ${volumeId}`)
+    }
+    
+    // Validate the article ObjectId
+    if (!articleId || articleId === 'undefined' || articleId === 'null' || !Types.ObjectId.isValid(articleId)) {
+      throw new BadRequestException(`Invalid article ID: ${articleId}`)
     }
 
     const volume = await this.volumeModel.findById(volumeId)
