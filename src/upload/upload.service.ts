@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common"
-import { S3Service } from "./services/s3.service"
+import { GitHubStorageService } from "./services/github-storage.service"
 import type { UploadResult, FileUploadOptions } from "./interfaces/upload.interface"
 import type { Express } from "express"
 
@@ -7,30 +7,27 @@ import type { Express } from "express"
 export class UploadService {
   private readonly logger = new Logger(UploadService.name)
 
-  constructor(private readonly s3Service: S3Service) {}
+  constructor(private readonly githubStorage: GitHubStorageService) {}
 
   async uploadFile(file: Express.Multer.File, options: FileUploadOptions): Promise<UploadResult> {
     try {
       this.validateFile(file, options.type)
 
-      const result = await this.s3Service.uploadFile(file, this.getFolderPath(options.type))
+      const result = await this.githubStorage.uploadFile(file, this.getFolderPath(options.type))
 
-      // Generate a presigned URL for secure access (valid for 7 days)
-      const downloadUrl = await this.s3Service.getPresignedUrl(result.key, 7 * 24 * 3600)
-
-      this.logger.log(`File uploaded successfully: ${result.key}`)
+      this.logger.log(`File uploaded successfully: ${result.fileName}`)
 
       return {
-        publicId: result.key, // Using S3 key as publicId for compatibility
-        url: result.url,
-        secureUrl: result.url, // S3 URLs are always HTTPS
+        publicId: result.assetId.toString(), // GitHub asset ID as publicId
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl, // GitHub URLs are always HTTPS
         format: result.format,
         bytes: result.size,
-        width: null, // S3 doesn't return dimensions
-        height: null, // S3 doesn't return dimensions
+        width: null, // GitHub doesn't return dimensions
+        height: null, // GitHub doesn't return dimensions
         originalName: file.originalname,
         mimeType: file.mimetype,
-        downloadUrl: downloadUrl,
+        downloadUrl: result.downloadUrl, // Direct download URL
       }
     } catch (error) {
       this.logger.error(`File upload failed: ${error.message}`)
@@ -45,17 +42,37 @@ export class UploadService {
 
   async deleteFile(publicId: string): Promise<boolean> {
     try {
-      await this.s3Service.deleteFile(publicId) // publicId is the S3 key
+      const assetId = parseInt(publicId, 10)
+      if (isNaN(assetId)) {
+        // This is likely a Cloudinary publicId (string format)
+        // Skip deletion for legacy Cloudinary files
+        this.logger.warn(`Skipping deletion of legacy file with publicId: ${publicId}`)
+        return true // Return true to not block the operation
+      }
+      await this.githubStorage.deleteFile(assetId) // publicId is the GitHub asset ID
       this.logger.log(`File deleted successfully: ${publicId}`)
       return true
     } catch (error) {
       this.logger.error(`File deletion failed: ${error.message}`)
+      // Don't throw, just log and return false
       return false
     }
   }
 
-  async generateSignedUrl(publicId: string, expiresIn: number = 3600): Promise<string> {
-    return this.s3Service.getPresignedUrl(publicId, expiresIn)
+  async generateSignedUrl(publicId: string): Promise<string> {
+    // GitHub URLs don't need signing - they're permanent public URLs
+    // This is for compatibility only
+    try {
+      const assetId = parseInt(publicId, 10)
+      if (isNaN(assetId)) {
+        throw new Error('Invalid asset ID')
+      }
+      const metadata = await this.githubStorage.getFileMetadata(assetId)
+      return metadata.downloadUrl
+    } catch (error) {
+      this.logger.error(`Failed to get download URL: ${error.message}`)
+      throw new BadRequestException(`Failed to get download URL: ${error.message}`)
+    }
   }
 
   // Convenience methods for specific file types
