@@ -8,7 +8,6 @@ import { User } from '../users/schemas/user.schema'
 export interface JournalStatistics {
   totalArticles: number
   totalCountries: number
-  impactFactor: number
   totalVolumes: number
   totalUsers: number
 }
@@ -58,32 +57,12 @@ export class StatisticsService {
 
     const totalCountries = countries.size
 
-    // For now, we'll use a calculated impact factor based on articles and citations
-    // In a real implementation, this would come from external sources like JCR
-    const impactFactor = await this.calculateImpactFactor()
-
     return {
       totalArticles,
       totalCountries,
-      impactFactor,
       totalVolumes,
       totalUsers,
     }
-  }
-
-  private async calculateImpactFactor(): Promise<number> {
-    // This is a simplified calculation
-    // In reality, impact factor comes from external sources like Journal Citation Reports
-    const publishedArticles = await this.articleModel.countDocuments({
-      status: 'published'
-    })
-
-    // Mock calculation - replace with actual citation data when available
-    const baseFactor = 2.5
-    const volumeBonus = publishedArticles > 1000 ? 0.5 : 0
-    const countryBonus = publishedArticles > 500 ? 0.3 : 0
-
-    return Math.round((baseFactor + volumeBonus + countryBonus) * 10) / 10
   }
 
   private extractCountryFromAffiliation(affiliation: string): string | null {
