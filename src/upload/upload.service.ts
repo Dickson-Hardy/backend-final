@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common"
-import { CloudinaryService } from "./services/cloudinary.service"
+import { S3Service } from "./services/s3.service"
 import type { UploadResult, FileUploadOptions } from "./interfaces/upload.interface"
 import type { Express } from "express"
 
@@ -7,31 +7,30 @@ import type { Express } from "express"
 export class UploadService {
   private readonly logger = new Logger(UploadService.name)
 
-  constructor(private readonly cloudinaryService: CloudinaryService) {}
+  constructor(private readonly s3Service: S3Service) {}
 
   async uploadFile(file: Express.Multer.File, options: FileUploadOptions): Promise<UploadResult> {
     try {
       this.validateFile(file, options.type)
 
-      const result = await this.cloudinaryService.uploadFile(file, {
-        folder: this.getFolderPath(options.type),
-        resourceType: this.getResourceType(options.type),
-        allowedFormats: this.getAllowedFormats(options.type),
-        transformation: this.getTransformation(options.type),
-      })
+      const result = await this.s3Service.uploadFile(file, this.getFolderPath(options.type))
 
-      this.logger.log(`File uploaded successfully: ${result.publicId}`)
+      // Generate a presigned URL for secure access (valid for 7 days)
+      const downloadUrl = await this.s3Service.getPresignedUrl(result.key, 7 * 24 * 3600)
+
+      this.logger.log(`File uploaded successfully: ${result.key}`)
 
       return {
-        publicId: result.publicId,
+        publicId: result.key, // Using S3 key as publicId for compatibility
         url: result.url,
-        secureUrl: result.secureUrl,
+        secureUrl: result.url, // S3 URLs are always HTTPS
         format: result.format,
-        bytes: result.bytes,
-        width: result.width,
-        height: result.height,
+        bytes: result.size,
+        width: null, // S3 doesn't return dimensions
+        height: null, // S3 doesn't return dimensions
         originalName: file.originalname,
         mimeType: file.mimetype,
+        downloadUrl: downloadUrl,
       }
     } catch (error) {
       this.logger.error(`File upload failed: ${error.message}`)
@@ -46,17 +45,17 @@ export class UploadService {
 
   async deleteFile(publicId: string): Promise<boolean> {
     try {
-      const result = await this.cloudinaryService.deleteFile(publicId)
+      await this.s3Service.deleteFile(publicId) // publicId is the S3 key
       this.logger.log(`File deleted successfully: ${publicId}`)
-      return result.result === "ok"
+      return true
     } catch (error) {
       this.logger.error(`File deletion failed: ${error.message}`)
       return false
     }
   }
 
-  async generateSignedUrl(publicId: string, transformation?: any): Promise<string> {
-    return this.cloudinaryService.generateSignedUrl(publicId, transformation)
+  async generateSignedUrl(publicId: string, expiresIn: number = 3600): Promise<string> {
+    return this.s3Service.getPresignedUrl(publicId, expiresIn)
   }
 
   // Convenience methods for specific file types

@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config"
 import { v2 as cloudinary } from "cloudinary"
 import type { Express } from "express"
 import type { CloudinaryUploadOptions, CloudinaryUploadResult } from "../interfaces/upload.interface"
+import { extname } from "path"
 
 @Injectable()
 export class CloudinaryService {
@@ -52,22 +53,122 @@ export class CloudinaryService {
           this.logger.error(`Cloudinary upload error: ${error.message}`)
           reject(error)
         } else {
+          const normalizedFormat = this.normalizeFormat(result?.format, file)
+          const version = result?.version
+
+          const urlWithFormat = normalizedFormat
+            ? cloudinary.url(result.public_id, {
+                resource_type: result.resource_type,
+                secure: false,
+                format: normalizedFormat,
+                version,
+              })
+            : result.url
+
+          const secureUrlWithFormat = normalizedFormat
+            ? cloudinary.url(result.public_id, {
+                resource_type: result.resource_type,
+                secure: true,
+                format: normalizedFormat,
+                version,
+              })
+            : result.secure_url
+
+          const downloadUrl = secureUrlWithFormat
+            ? `${secureUrlWithFormat}?attachment=${encodeURIComponent(
+                file.originalname || `download.${normalizedFormat ?? "file"}`
+              )}`
+            : undefined
+
           resolve({
             publicId: result.public_id,
-            url: result.url,
-            secureUrl: result.secure_url,
-            format: result.format,
+            url: urlWithFormat,
+            secureUrl: secureUrlWithFormat,
+            format: normalizedFormat ?? result.format,
             bytes: result.bytes,
             width: result.width,
             height: result.height,
             resourceType: result.resource_type,
             createdAt: result.created_at,
+            version,
+            downloadUrl,
           })
         }
       })
 
       uploadStream.end(file.buffer)
     })
+  }
+
+  private normalizeFormat(resultFormat: string | undefined, file: Express.Multer.File): string | undefined {
+    const directFormat = resultFormat?.toLowerCase()
+    if (directFormat) {
+      return directFormat
+    }
+
+    const filenameFormat = this.getFormatFromFilename(file.originalname)
+    if (filenameFormat) {
+      return filenameFormat
+    }
+
+    const mimeFormat = this.getFormatFromMime(file.mimetype)
+    if (mimeFormat) {
+      return mimeFormat
+    }
+
+    return undefined
+  }
+
+  private getFormatFromFilename(filename?: string): string | undefined {
+    if (!filename) {
+      return undefined
+    }
+
+    const extension = extname(filename).toLowerCase()
+    if (!extension) {
+      return undefined
+    }
+
+    return extension.replace(".", "") || undefined
+  }
+
+  private getFormatFromMime(mimetype?: string): string | undefined {
+    if (!mimetype) {
+      return undefined
+    }
+
+    const parts = mimetype.split("/")
+    if (parts.length !== 2) {
+      return undefined
+    }
+
+    const subtype = parts[1]?.toLowerCase()
+
+    if (subtype === "vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      return "docx"
+    }
+
+    if (subtype === "msword") {
+      return "doc"
+    }
+
+    if (subtype === "vnd.ms-excel") {
+      return "xls"
+    }
+
+    if (subtype === "vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      return "xlsx"
+    }
+
+    if (subtype === "plain") {
+      return "txt"
+    }
+
+    if (subtype.includes("+xml")) {
+      return "xml"
+    }
+
+    return subtype || undefined
   }
 
   async deleteFile(publicId: string): Promise<any> {
