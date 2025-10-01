@@ -5,6 +5,7 @@ import { AdminService } from './admin.service'
 import { User, UserSchema } from '../users/schemas/user.schema'
 import { Article, ArticleSchema } from '../articles/schemas/article.schema'
 import { Volume, VolumeSchema } from '../volumes/schemas/volume.schema'
+import { UploadModule } from '../upload/upload.module'
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { Volume, VolumeSchema } from '../volumes/schemas/volume.schema'
       { name: Article.name, schema: ArticleSchema },
       { name: Volume.name, schema: VolumeSchema },
     ]),
+    UploadModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

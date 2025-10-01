@@ -8,6 +8,7 @@ export interface UploadResult {
   height?: number
   originalName?: string
   mimeType?: string
+  downloadUrl?: string
 }
 
 export interface FileUploadOptions {
@@ -34,4 +35,6 @@ export interface CloudinaryUploadResult {
   height?: number
   resourceType: string
   createdAt: string
+  version?: number
+  downloadUrl?: string
 }
