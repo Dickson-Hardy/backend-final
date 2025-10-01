@@ -99,8 +99,8 @@ export class UploadController {
   @ApiOperation({ summary: "Generate signed URL for private file access" })
   @ApiResponse({ status: 200, description: "Signed URL generated" })
   async getSignedUrl(@Param("publicId") publicId: string, @Query("transformation") transformation?: string) {
-    const transformationObj = transformation ? JSON.parse(transformation) : undefined
-    const url = await this.uploadService.generateSignedUrl(publicId, transformationObj)
+    // Note: transformation parameter is ignored for GitHub storage as it doesn't support transformations
+    const url = await this.uploadService.generateSignedUrl(publicId)
     return { url }
   }
 }
