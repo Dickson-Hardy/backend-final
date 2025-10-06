@@ -10,6 +10,15 @@ import { EmailModule } from "./email/email.module"
 import { UploadModule } from "./upload/upload.module"
 import { StatisticsModule } from "./statistics/statistics.module"
 import { AdminModule } from "./admin/admin.module"
+import { MessagesModule } from "./messages/messages.module"
+import { NotificationsModule } from "./notifications/notifications.module"
+import { ReviewsModule } from "./reviews/reviews.module"
+import { AnnouncementsModule } from "./announcements/announcements.module"
+import { DraftsModule } from "./drafts/drafts.module"
+import { QualityReviewsModule } from "./quality-reviews/quality-reviews.module"
+import { BoardModule } from "./board/board.module"
+import { AnalyticsModule } from "./analytics/analytics.module"
+import { EditorialDecisionsModule } from "./editorial-decisions/editorial-decisions.module"
 import { AppController } from "./app.controller"
 
 @Module({
@@ -33,6 +42,15 @@ import { AppController } from "./app.controller"
     UploadModule,
     StatisticsModule,
     AdminModule,
+    MessagesModule,
+    NotificationsModule,
+    ReviewsModule,
+    AnnouncementsModule,
+    DraftsModule,
+    QualityReviewsModule,
+    BoardModule,
+    AnalyticsModule,
+    EditorialDecisionsModule,
   ],
   controllers: [AppController],
   providers: [],
