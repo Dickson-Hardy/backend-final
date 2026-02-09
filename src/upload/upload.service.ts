@@ -1,191 +1,246 @@
-import { Injectable, BadRequestException, Logger } from "@nestjs/common"
-import { GitHubStorageService } from "./services/github-storage.service"
-import type { UploadResult, FileUploadOptions } from "./interfaces/upload.interface"
-import type { Express } from "express"
+import { Injectable, BadRequestException } from "@nestjs/common"
+import * as fs from "fs"
+import * as path from "path"
 
 @Injectable()
 export class UploadService {
-  private readonly logger = new Logger(UploadService.name)
+  async uploadFile(file: Express.Multer.File) {
+    // For now, return file info
+    // In production, upload to S3/cloud storage
+    return {
+      filename: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      url: `/uploads/${file.filename}`,
+    }
+  }
 
-  constructor(private readonly githubStorage: GitHubStorageService) {}
+  async uploadMultiple(files: Express.Multer.File[]) {
+    const uploadedFiles = await Promise.all(
+      files.map(file => this.uploadFile(file))
+    )
+    return uploadedFiles
+  }
 
-  async uploadFile(file: Express.Multer.File, options: FileUploadOptions): Promise<UploadResult> {
+  async extractMetadata(file: Express.Multer.File) {
+    const fileExtension = path.extname(file.originalname).toLowerCase()
+    
     try {
-      this.validateFile(file, options.type)
-
-      const result = await this.githubStorage.uploadFile(file, this.getFolderPath(options.type))
-
-      this.logger.log(`File uploaded successfully: ${result.fileName}`)
-
+      switch (fileExtension) {
+        case '.pdf':
+          return await this.extractPdfMetadata(file)
+        case '.docx':
+        case '.doc':
+          return await this.extractDocxMetadata(file)
+        case '.txt':
+          return await this.extractTxtMetadata(file)
+        default:
+          throw new BadRequestException('Unsupported file type for metadata extraction')
+      }
+    } catch (error) {
+      console.error('Error extracting metadata:', error)
       return {
-        publicId: result.assetId.toString(), // GitHub asset ID as publicId
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl, // GitHub URLs are always HTTPS
-        format: result.format,
-        bytes: result.size,
-        width: null, // GitHub doesn't return dimensions
-        height: null, // GitHub doesn't return dimensions
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        downloadUrl: result.downloadUrl, // Direct download URL
+        success: false,
+        message: 'Failed to extract metadata. Please fill in the details manually.',
+        extracted: {}
       }
-    } catch (error) {
-      this.logger.error(`File upload failed: ${error.message}`)
-      throw new BadRequestException(`Upload failed: ${error.message}`)
     }
   }
 
-  async uploadMultipleFiles(files: Express.Multer.File[], options: FileUploadOptions): Promise<UploadResult[]> {
-    const uploadPromises = files.map((file) => this.uploadFile(file, options))
-    return Promise.all(uploadPromises)
-  }
-
-  async deleteFile(publicId: string): Promise<boolean> {
+  private async extractPdfMetadata(file: Express.Multer.File) {
+    // For PDF extraction, we'll use pdf-parse
     try {
-      const assetId = parseInt(publicId, 10)
-      if (isNaN(assetId)) {
-        // This is likely a Cloudinary publicId (string format)
-        // Skip deletion for legacy Cloudinary files
-        this.logger.warn(`Skipping deletion of legacy file with publicId: ${publicId}`)
-        return true // Return true to not block the operation
+      const pdfParse = require('pdf-parse')
+      const dataBuffer = file.buffer || fs.readFileSync(file.path)
+      const data = await pdfParse(dataBuffer)
+      
+      const text = data.text
+      const lines = text.split('\n').filter(line => line.trim())
+      
+      // Extract metadata using heuristics
+      const metadata = {
+        title: this.extractTitle(lines),
+        abstract: this.extractAbstract(text),
+        authors: this.extractAuthors(text),
+        keywords: this.extractKeywords(text),
+        email: this.extractEmail(text),
       }
-      await this.githubStorage.deleteFile(assetId) // publicId is the GitHub asset ID
-      this.logger.log(`File deleted successfully: ${publicId}`)
-      return true
+      
+      return {
+        success: true,
+        message: 'Metadata extracted successfully',
+        extracted: metadata,
+        fullText: text.substring(0, 5000) // First 5000 chars for preview
+      }
     } catch (error) {
-      this.logger.error(`File deletion failed: ${error.message}`)
-      // Don't throw, just log and return false
-      return false
+      console.error('PDF extraction error:', error)
+      return {
+        success: false,
+        message: 'PDF parsing failed. Please install pdf-parse: npm install pdf-parse',
+        extracted: {}
+      }
     }
   }
 
-  async generateSignedUrl(publicId: string): Promise<string> {
-    // GitHub URLs don't need signing - they're permanent public URLs
-    // This is for compatibility only
+  private async extractDocxMetadata(file: Express.Multer.File) {
+    // For DOCX extraction, we'll use mammoth
     try {
-      const assetId = parseInt(publicId, 10)
-      if (isNaN(assetId)) {
-        throw new Error('Invalid asset ID')
+      const mammoth = require('mammoth')
+      const dataBuffer = file.buffer || fs.readFileSync(file.path)
+      const result = await mammoth.extractRawText({ buffer: dataBuffer })
+      
+      const text = result.value
+      const lines = text.split('\n').filter(line => line.trim())
+      
+      const metadata = {
+        title: this.extractTitle(lines),
+        abstract: this.extractAbstract(text),
+        authors: this.extractAuthors(text),
+        keywords: this.extractKeywords(text),
+        email: this.extractEmail(text),
       }
-      const metadata = await this.githubStorage.getFileMetadata(assetId)
-      return metadata.downloadUrl
+      
+      return {
+        success: true,
+        message: 'Metadata extracted successfully',
+        extracted: metadata,
+        fullText: text.substring(0, 5000)
+      }
     } catch (error) {
-      this.logger.error(`Failed to get download URL: ${error.message}`)
-      throw new BadRequestException(`Failed to get download URL: ${error.message}`)
+      console.error('DOCX extraction error:', error)
+      return {
+        success: false,
+        message: 'DOCX parsing failed. Please install mammoth: npm install mammoth',
+        extracted: {}
+      }
     }
   }
 
-  // Convenience methods for specific file types
-  async uploadManuscript(file: Express.Multer.File): Promise<UploadResult> {
-    return this.uploadFile(file, { type: 'manuscript' })
-  }
-
-  async uploadNews(file: Express.Multer.File): Promise<UploadResult> {
-    return this.uploadFile(file, { type: 'news' })
-  }
-
-  async uploadProfile(file: Express.Multer.File): Promise<UploadResult> {
-    return this.uploadFile(file, { type: 'profile' })
-  }
-
-  async uploadImage(file: Express.Multer.File): Promise<UploadResult> {
-    return this.uploadFile(file, { type: 'image' })
-  }
-
-  async uploadSupplementary(file: Express.Multer.File): Promise<UploadResult> {
-    return this.uploadFile(file, { type: 'supplementary' })
-  }
-
-  private validateFile(file: Express.Multer.File, type: string): void {
-    const maxSizes = {
-      manuscript: 50 * 1024 * 1024, // 50MB
-      image: 10 * 1024 * 1024, // 10MB
-      supplementary: 100 * 1024 * 1024, // 100MB
-      profile: 5 * 1024 * 1024, // 5MB
-    }
-
-    const allowedTypes = {
-      manuscript: [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ],
-      image: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-      supplementary: [
-        "application/pdf",
-        "application/zip",
-        "application/x-zip-compressed",
-        "text/csv",
-        "application/vnd.ms-excel",
-      ],
-      profile: ["image/jpeg", "image/png", "image/webp"],
-    }
-
-    const maxSize = maxSizes[type] || 10 * 1024 * 1024
-    const allowed = allowedTypes[type] || allowedTypes.image
-
-    if (file.size > maxSize) {
-      throw new BadRequestException(`File size exceeds limit of ${maxSize / (1024 * 1024)}MB`)
-    }
-
-    if (!allowed.includes(file.mimetype)) {
-      throw new BadRequestException(`File type ${file.mimetype} not allowed for ${type}`)
+  private async extractTxtMetadata(file: Express.Multer.File) {
+    try {
+      const text = file.buffer ? file.buffer.toString('utf-8') : fs.readFileSync(file.path, 'utf-8')
+      const lines = text.split('\n').filter(line => line.trim())
+      
+      const metadata = {
+        title: this.extractTitle(lines),
+        abstract: this.extractAbstract(text),
+        authors: this.extractAuthors(text),
+        keywords: this.extractKeywords(text),
+        email: this.extractEmail(text),
+      }
+      
+      return {
+        success: true,
+        message: 'Metadata extracted successfully',
+        extracted: metadata,
+        fullText: text.substring(0, 5000)
+      }
+    } catch (error) {
+      console.error('TXT extraction error:', error)
+      return {
+        success: false,
+        message: 'Failed to read text file',
+        extracted: {}
+      }
     }
   }
 
-  private getFolderPath(type: string): string {
-    const folders = {
-      manuscript: "amhsj/manuscripts",
-      image: "amhsj/images",
-      supplementary: "amhsj/supplementary",
-      profile: "amhsj/profiles",
-      cover: "amhsj/covers",
-      news: "amhsj/news",
-    }
-
-    return folders[type] || "amhsj/misc"
+  // Heuristic extraction methods
+  private extractTitle(lines: string[]): string {
+    // Title is usually the first non-empty line or the longest line in first few lines
+    if (lines.length === 0) return ''
+    
+    // Check first 5 lines for title
+    const firstLines = lines.slice(0, 5)
+    const longestLine = firstLines.reduce((a, b) => a.length > b.length ? a : b, '')
+    
+    return longestLine.trim()
   }
 
-  private getResourceType(type: string): "image" | "video" | "raw" | "auto" {
-    if (type === "image" || type === "profile" || type === "cover" || type === "news") {
-      return "image"
+  private extractAbstract(text: string): string {
+    // Look for abstract section
+    const abstractRegex = /abstract[:\s]+([\s\S]{100,2000}?)(?=\n\n|introduction|keywords|1\.|I\.|$)/i
+    const match = text.match(abstractRegex)
+    
+    if (match && match[1]) {
+      return match[1].trim().replace(/\s+/g, ' ')
     }
-    return "raw"
+    
+    // Fallback: return first paragraph after title
+    const paragraphs = text.split('\n\n').filter(p => p.trim().length > 100)
+    return paragraphs[0]?.trim().substring(0, 500) || ''
   }
 
-  private getAllowedFormats(type: string): string[] {
-    const formats = {
-      manuscript: ["pdf", "doc", "docx"],
-      image: ["jpg", "jpeg", "png", "webp", "gif"],
-      supplementary: ["pdf", "zip", "csv", "xls", "xlsx"],
-      profile: ["jpg", "jpeg", "png", "webp"],
-      cover: ["jpg", "jpeg", "png", "webp"],
-      news: ["jpg", "jpeg", "png", "webp"],
+  private extractAuthors(text: string): Array<{firstName: string, lastName: string, email: string, affiliation: string}> {
+    const authors: Array<{firstName: string, lastName: string, email: string, affiliation: string}> = []
+    
+    // Look for author section (usually after title, before abstract)
+    const authorRegex = /(?:authors?|by)[:\s]+([^\n]{10,200})/i
+    const match = text.match(authorRegex)
+    
+    if (match && match[1]) {
+      const authorText = match[1]
+      // Split by common separators
+      const authorNames = authorText.split(/[,;]|and\s+/).map(a => a.trim())
+      
+      authorNames.forEach(name => {
+        const parts = name.split(/\s+/)
+        if (parts.length >= 2) {
+          authors.push({
+            firstName: parts[0],
+            lastName: parts.slice(1).join(' '),
+            email: '',
+            affiliation: ''
+          })
+        }
+      })
     }
-
-    return formats[type] || formats.image
+    
+    // If no authors found, try to extract from email addresses
+    if (authors.length === 0) {
+      const emails = this.extractAllEmails(text)
+      emails.forEach(email => {
+        const namePart = email.split('@')[0]
+        const parts = namePart.split(/[._]/)
+        if (parts.length >= 2) {
+          authors.push({
+            firstName: parts[0],
+            lastName: parts[1],
+            email: email,
+            affiliation: ''
+          })
+        }
+      })
+    }
+    
+    return authors.slice(0, 5) // Limit to 5 authors
   }
 
-  private getTransformation(type: string): any {
-    const transformations = {
-      profile: [
-        { width: 400, height: 400, crop: "fill", gravity: "face" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
-      cover: [
-        { width: 800, height: 1200, crop: "fill" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
-      news: [
-        { width: 1200, height: 630, crop: "fill" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
-      image: [
-        { width: 1200, crop: "limit" },
-        { quality: "auto", fetch_format: "auto" },
-      ],
+  private extractKeywords(text: string): string[] {
+    // Look for keywords section
+    const keywordsRegex = /keywords?[:\s]+([^\n]{10,300})/i
+    const match = text.match(keywordsRegex)
+    
+    if (match && match[1]) {
+      return match[1]
+        .split(/[,;]/)
+        .map(k => k.trim())
+        .filter(k => k.length > 2 && k.length < 50)
+        .slice(0, 10)
     }
+    
+    return []
+  }
 
-    return transformations[type]
+  private extractEmail(text: string): string {
+    const emails = this.extractAllEmails(text)
+    return emails[0] || ''
+  }
+
+  private extractAllEmails(text: string): string[] {
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g
+    const matches = text.match(emailRegex)
+    return matches ? [...new Set(matches)] : []
   }
 }
