@@ -19,6 +19,7 @@ import { QualityReviewsModule } from "./quality-reviews/quality-reviews.module"
 import { BoardModule } from "./board/board.module"
 import { AnalyticsModule } from "./analytics/analytics.module"
 import { EditorialDecisionsModule } from "./editorial-decisions/editorial-decisions.module"
+import { SettingsModule } from "./settings/settings.module"
 import { AppController } from "./app.controller"
 
 @Module({
@@ -51,6 +52,7 @@ import { AppController } from "./app.controller"
     BoardModule,
     AnalyticsModule,
     EditorialDecisionsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [],
