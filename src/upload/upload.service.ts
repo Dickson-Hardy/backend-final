@@ -1,26 +1,130 @@
 import { Injectable, BadRequestException } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
+import { GitHubStorageService } from "./services/github-storage.service"
 import * as fs from "fs"
 import * as path from "path"
 
+export interface UploadResult {
+  publicId: string
+  url: string
+  secureUrl: string
+  format: string
+  bytes: number
+  width?: number
+  height?: number
+  originalName?: string
+  mimeType?: string
+}
+
 @Injectable()
 export class UploadService {
-  async uploadFile(file: Express.Multer.File) {
-    // For now, return file info
-    // In production, upload to S3/cloud storage
-    return {
-      filename: file.filename,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-      url: `/uploads/${file.filename}`,
+  constructor(
+    private configService: ConfigService,
+    private githubStorage: GitHubStorageService,
+  ) {}
+
+  async uploadFile(file: Express.Multer.File): Promise<UploadResult> {
+    try {
+      const result = await this.githubStorage.uploadFile(file, 'uploads')
+      return {
+        publicId: result.assetId.toString(),
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl,
+        format: result.format,
+        bytes: result.size,
+        originalName: result.originalName,
+        mimeType: result.mimeType,
+      }
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload file: ${error.message}`)
     }
   }
 
-  async uploadMultiple(files: Express.Multer.File[]) {
+  async uploadMultiple(files: Express.Multer.File[]): Promise<UploadResult[]> {
     const uploadedFiles = await Promise.all(
       files.map(file => this.uploadFile(file))
     )
     return uploadedFiles
+  }
+
+  async uploadManuscript(file: Express.Multer.File): Promise<UploadResult> {
+    try {
+      const result = await this.githubStorage.uploadFile(file, 'manuscripts')
+      return {
+        publicId: result.assetId.toString(),
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl,
+        format: result.format,
+        bytes: result.size,
+        originalName: result.originalName,
+        mimeType: result.mimeType,
+      }
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload manuscript: ${error.message}`)
+    }
+  }
+
+  async uploadSupplementary(file: Express.Multer.File): Promise<UploadResult> {
+    try {
+      const result = await this.githubStorage.uploadFile(file, 'supplementary')
+      return {
+        publicId: result.assetId.toString(),
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl,
+        format: result.format,
+        bytes: result.size,
+        originalName: result.originalName,
+        mimeType: result.mimeType,
+      }
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload supplementary file: ${error.message}`)
+    }
+  }
+
+  async uploadNews(file: Express.Multer.File): Promise<UploadResult> {
+    try {
+      const result = await this.githubStorage.uploadFile(file, 'news')
+      return {
+        publicId: result.assetId.toString(),
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl,
+        format: result.format,
+        bytes: result.size,
+        originalName: result.originalName,
+        mimeType: result.mimeType,
+      }
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload news image: ${error.message}`)
+    }
+  }
+
+  async uploadProfile(file: Express.Multer.File): Promise<UploadResult> {
+    try {
+      const result = await this.githubStorage.uploadFile(file, 'profiles')
+      return {
+        publicId: result.assetId.toString(),
+        url: result.downloadUrl,
+        secureUrl: result.downloadUrl,
+        format: result.format,
+        bytes: result.size,
+        originalName: result.originalName,
+        mimeType: result.mimeType,
+      }
+    } catch (error) {
+      throw new BadRequestException(`Failed to upload profile image: ${error.message}`)
+    }
+  }
+
+  async deleteFile(publicId: string): Promise<void> {
+    try {
+      const assetId = parseInt(publicId, 10)
+      if (isNaN(assetId)) {
+        throw new Error('Invalid asset ID')
+      }
+      await this.githubStorage.deleteFile(assetId)
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete file: ${error.message}`)
+    }
   }
 
   async extractMetadata(file: Express.Multer.File) {
