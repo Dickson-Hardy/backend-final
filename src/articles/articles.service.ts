@@ -142,7 +142,7 @@ export class ArticlesService {
       this.articleModel
         .find(query)
         .populate('authors', 'firstName lastName email')
-        .populate('volume', 'number year title')
+        .populate('volume', 'volume year title')
         .sort({ publishedDate: -1 })
         .skip(skip)
         .limit(limit)
@@ -164,7 +164,7 @@ export class ArticlesService {
   async findFeatured(): Promise<Article[]> {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED, featured: true })
-      .populate('volume', 'number year title')
+      .populate('volume', 'volume year title')
       .sort({ publishedDate: -1 })
       .limit(6)
       .exec()
@@ -173,7 +173,7 @@ export class ArticlesService {
   async findRecent(limit: number = 5): Promise<Article[]> {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED })
-      .populate('volume', 'number year title')
+      .populate('volume', 'volume year title')
       .sort({ publishedDate: -1 })
       .limit(limit)
       .exec()
@@ -186,7 +186,7 @@ export class ArticlesService {
     const [articles, total] = await Promise.all([
       this.articleModel
         .find(query)
-        .populate('volume', 'number year title')
+        .populate('volume', 'volume year title')
         .sort({ submissionDate: -1 })
         .skip(skip)
         .limit(limit)
