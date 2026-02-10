@@ -35,7 +35,8 @@ export class VolumesService {
     const volumeData = {
       ...createVolumeDto,
       status: volumeStatus,
-      ...(volumeStatus === 'published' && { publishDate: new Date() })
+      // Only set publishDate to current date if not provided and status is published
+      ...(volumeStatus === 'published' && !createVolumeDto.publishDate && { publishDate: new Date() })
     }
     
     const createdVolume = new this.volumeModel(volumeData)
