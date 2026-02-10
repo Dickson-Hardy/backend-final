@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
 import { Article, ArticleDocument, ArticleStatus } from './schemas/article.schema'
+import { Volume, VolumeDocument } from '../volumes/schemas/volume.schema'
 import { CreateArticleDto } from './dto/create-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
 import { UploadService } from '../upload/upload.service'
@@ -12,6 +13,7 @@ import { Express } from 'express'
 export class ArticlesService {
   constructor(
     @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
+    @InjectModel(Volume.name) private volumeModel: Model<VolumeDocument>,
     private uploadService: UploadService,
     private emailService: EmailService
   ) {}
@@ -206,9 +208,20 @@ export class ArticlesService {
   async findByVolumeAndArticleNumber(volumeNumber: number, articleNumber: string): Promise<Article> {
     console.log('📝 Finding article:', { volumeNumber, articleNumber })
     
+    // First, find the volume by its volume number
+    const volume = await this.volumeModel.findOne({ volume: volumeNumber }).exec()
+    
+    if (!volume) {
+      throw new NotFoundException(`Volume ${volumeNumber} not found`)
+    }
+    
+    console.log('📝 Found volume:', { id: volume._id, volume: volume.volume, title: volume.title })
+    
+    // Now find the article by article number AND volume ID
     const article = await this.articleModel
       .findOne({
-        articleNumber: articleNumber
+        articleNumber: articleNumber,
+        volume: volume._id
       })
       .populate('authors', 'firstName lastName email affiliation')
       .populate('volume', 'volume title year')
@@ -217,19 +230,7 @@ export class ArticlesService {
     console.log('📝 Found article:', article ? { id: article._id, title: article.title, status: article.status, volume: article.volume } : 'null')
 
     if (!article) {
-      throw new NotFoundException('Article not found')
-    }
-
-    // Verify the article belongs to the specified volume
-    if (article.volume && typeof article.volume === 'object' && 'volume' in article.volume) {
-      const articleVolumeNumber = (article.volume as any).volume
-      console.log('📝 Comparing volume numbers:', { requested: volumeNumber, articleVolume: articleVolumeNumber })
-      if (articleVolumeNumber !== volumeNumber) {
-        throw new NotFoundException(`Article not found in specified volume. Article belongs to volume ${articleVolumeNumber}, requested volume ${volumeNumber}`)
-      }
-    } else {
-      console.log('📝 Article volume not populated or invalid:', article.volume)
-      throw new NotFoundException('Article volume information not available')
+      throw new NotFoundException(`Article ${articleNumber} not found in volume ${volumeNumber}`)
     }
 
     return article
