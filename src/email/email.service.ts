@@ -185,7 +185,7 @@ export class EmailService {
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
               ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Welcome to AMHSJ</h1>
-              <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine & Health Sciences Journal</p>
+              <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine and Health Sciences Journal</p>
               <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 14px;">Peer-Reviewed Medical Research Platform</p>
             </div>
           </div>
@@ -195,7 +195,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${name},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 20px; font-size: 16px;">
-              Welcome to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong> community! We are delighted to have you join our distinguished network of healthcare professionals, researchers, and medical practitioners.
+              Welcome to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong> community! We are delighted to have you join our distinguished network of healthcare professionals, researchers, and medical practitioners.
             </p>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
@@ -229,20 +229,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               If you have any questions or need assistance, please contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email was sent to you because you registered for an AMHSJ account.
             </p>
           </div>
         </div>
       `,
-      text: `Welcome to AMHSJ, Dr. ${name}!\n\nYour account has been successfully created. You can now submit articles, participate in peer reviews, and access our extensive library of medical research.\n\nAccess your dashboard: ${this.configService.get("FRONTEND_URL")}/dashboard\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Welcome to AMHSJ, Dr. ${name}!\n\nYour account has been successfully created. You can now submit articles, participate in peer reviews, and access our extensive library of medical research.\n\nAccess your dashboard: ${this.configService.get("FRONTEND_URL")}/dashboard\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -266,7 +266,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear ${name},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              Thank you for registering with the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>. 
+              Thank you for registering with the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>. 
               To complete your account setup and start submitting your research, please verify your email address.
             </p>
             
@@ -301,7 +301,7 @@ export class EmailService {
           <!-- Footer -->
           <div style="background: #f8fafc; padding: 30px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
             <p style="color: #64748b; margin: 0 0 10px 0; font-size: 14px;">
-              <strong>Advances in Medicine & Health Sciences Journal</strong>
+              <strong>Advances in Medicine and Health Sciences Journal</strong>
             </p>
             <p style="color: #94a3b8; margin: 0; font-size: 12px;">
               This is an automated message. Please do not reply to this email.
@@ -314,7 +314,7 @@ export class EmailService {
         
         Dear ${name},
         
-        Thank you for registering with the Advances in Medicine & Health Sciences Journal (AMHSJ). 
+        Thank you for registering with the Advances in Medicine and Health Sciences Journal (AMHSJ). 
         To complete your account setup, please verify your email address by clicking the link below:
         
         ${verificationUrl}
@@ -358,7 +358,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${authorName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              Thank you for submitting your manuscript to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>. 
+              Thank you for submitting your manuscript to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>. 
               We have successfully received your submission and it is now in our editorial system.
             </p>
             
@@ -404,20 +404,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about your submission? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email confirms your manuscript submission to AMHSJ.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${authorName},\n\nThank you for submitting your manuscript "${articleTitle}" to AMHSJ.\n\nSubmission Details:\n- Submission ID: AMHSJ-${submissionId}\n- Submission Date: ${submissionDate}\n- Status: Under Editorial Review\n\nYour manuscript will undergo initial editorial review within 5-7 business days. You can track your submission at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${authorName},\n\nThank you for submitting your manuscript "${articleTitle}" to AMHSJ.\n\nSubmission Details:\n- Submission ID: AMHSJ-${submissionId}\n- Submission Date: ${submissionDate}\n- Status: Under Editorial Review\n\nYour manuscript will undergo initial editorial review within 5-7 business days. You can track your submission at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -446,7 +446,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${reviewerName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              We hope this message finds you well. The editorial team of the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong> 
+              We hope this message finds you well. The editorial team of the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong> 
               would like to invite you to serve as a peer reviewer for a manuscript submitted to our journal.
             </p>
             
@@ -502,20 +502,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this review invitation? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email is sent to qualified reviewers for AMHSJ peer review process.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${reviewerName},\n\nYou are invited to review a manuscript for AMHSJ.\n\nManuscript Details:\n- Title: ${articleTitle}\n- Submission ID: AMHSJ-${submissionId}\n- Review Deadline: ${deadlineFormatted}\n\nPlease respond to this invitation by visiting: ${this.configService.get("FRONTEND_URL")}/dashboard/reviewer\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${reviewerName},\n\nYou are invited to review a manuscript for AMHSJ.\n\nManuscript Details:\n- Title: ${articleTitle}\n- Submission ID: AMHSJ-${submissionId}\n- Review Deadline: ${deadlineFormatted}\n\nPlease respond to this invitation by visiting: ${this.configService.get("FRONTEND_URL")}/dashboard/reviewer\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -544,7 +544,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${reviewerName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              Thank you for accepting our invitation to review a manuscript for the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>. 
+              Thank you for accepting our invitation to review a manuscript for the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>. 
               Your expertise is invaluable to maintaining the high quality of our publication.
             </p>
             
@@ -568,20 +568,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this review? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email confirms your review assignment for AMHSJ.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${reviewerName},\n\nYour review assignment has been confirmed.\n\nAssignment Details:\n- Title: ${articleTitle}\n- Submission ID: AMHSJ-${submissionId}\n- Review Deadline: ${deadlineFormatted}\n\nBegin your review at: ${this.configService.get("FRONTEND_URL")}/dashboard/reviewer/review/${submissionId}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${reviewerName},\n\nYour review assignment has been confirmed.\n\nAssignment Details:\n- Title: ${articleTitle}\n- Submission ID: AMHSJ-${submissionId}\n- Review Deadline: ${deadlineFormatted}\n\nBegin your review at: ${this.configService.get("FRONTEND_URL")}/dashboard/reviewer/review/${submissionId}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -625,20 +625,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this review? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email notifies you of a completed review for AMHSJ.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${editorName},\n\nA peer review has been completed for manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nReview completed: ${new Date().toLocaleDateString()}\nStatus: Ready for Editorial Decision\n\nView review and make decision at: ${this.configService.get("FRONTEND_URL")}/dashboard/editorial/review/${submissionId}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${editorName},\n\nA peer review has been completed for manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nReview completed: ${new Date().toLocaleDateString()}\nStatus: Ready for Editorial Decision\n\nView review and make decision at: ${this.configService.get("FRONTEND_URL")}/dashboard/editorial/review/${submissionId}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -678,7 +678,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${authorName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              We are writing to inform you of a status update regarding your manuscript submitted to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>.
+              We are writing to inform you of a status update regarding your manuscript submitted to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>.
             </p>
             
             <!-- Status Details -->
@@ -701,20 +701,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this status update? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email provides a status update for your AMHSJ submission.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${authorName},\n\nStatus update for your manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nNew Status: ${label}\nUpdate Date: ${new Date().toLocaleDateString()}\n\nView details at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${authorName},\n\nStatus update for your manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nNew Status: ${label}\nUpdate Date: ${new Date().toLocaleDateString()}\n\nView details at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -743,7 +743,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${authorName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              After careful consideration by our editorial team and peer reviewers, we are requesting revisions to your manuscript submitted to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>.
+              After careful consideration by our editorial team and peer reviewers, we are requesting revisions to your manuscript submitted to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>.
             </p>
             
             <!-- Revision Details -->
@@ -784,20 +784,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about the revision requirements? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email requests revisions for your AMHSJ submission.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${authorName},\n\nRevision requested for your manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nRevision Deadline: ${deadlineFormatted}\nStatus: Revision Requested\n\nReviewer Comments:\n${comments}\n\nSubmit revision at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}/revise\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${authorName},\n\nRevision requested for your manuscript "${articleTitle}" (AMHSJ-${submissionId}).\n\nRevision Deadline: ${deadlineFormatted}\nStatus: Revision Requested\n\nReviewer Comments:\n${comments}\n\nSubmit revision at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}/revise\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -828,7 +828,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${recipientName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              This is a friendly reminder regarding your ${reminderType.toLowerCase()} deadline for a manuscript submitted to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>.
+              This is a friendly reminder regarding your ${reminderType.toLowerCase()} deadline for a manuscript submitted to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>.
             </p>
             
             <!-- Reminder Details -->
@@ -860,20 +860,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this deadline? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email is a reminder for your AMHSJ ${reminderType.toLowerCase()} deadline.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${recipientName},\n\nReminder: ${reminderType} deadline approaching for "${articleTitle}" (AMHSJ-${submissionId}).\n\nDeadline: ${deadlineFormatted}\nDays Remaining: ${daysUntilDeadline}\n\nComplete your ${reminderType.toLowerCase()} at: ${this.configService.get("FRONTEND_URL")}/dashboard/${reminderType.toLowerCase().replace(' ', '-')}/${submissionId}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${recipientName},\n\nReminder: ${reminderType} deadline approaching for "${articleTitle}" (AMHSJ-${submissionId}).\n\nDeadline: ${deadlineFormatted}\nDays Remaining: ${daysUntilDeadline}\n\nComplete your ${reminderType.toLowerCase()} at: ${this.configService.get("FRONTEND_URL")}/dashboard/${reminderType.toLowerCase().replace(' ', '-')}/${submissionId}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -905,7 +905,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${authorName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              After careful consideration by our editorial team and peer reviewers, we have reached a decision regarding your manuscript submitted to the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong>.
+              After careful consideration by our editorial team and peer reviewers, we have reached a decision regarding your manuscript submitted to the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong>.
             </p>
             
             <!-- Decision Details -->
@@ -962,20 +962,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about this decision? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email provides the editorial decision for your AMHSJ submission.
             </p>
           </div>
         </div>
       `,
-      text: `Dear Dr. ${authorName},\n\nEditorial decision for your manuscript "${articleTitle}"${submissionId ? ` (AMHSJ-${submissionId})` : ''}.\n\nDecision: ${decision}\nDecision Date: ${new Date().toLocaleDateString()}\n\n${comments ? `Editorial Comments:\n${comments}\n\n` : ''}View details at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions${submissionId ? `/${submissionId}` : ''}\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Dear Dr. ${authorName},\n\nEditorial decision for your manuscript "${articleTitle}"${submissionId ? ` (AMHSJ-${submissionId})` : ''}.\n\nDecision: ${decision}\nDecision Date: ${new Date().toLocaleDateString()}\n\n${comments ? `Editorial Comments:\n${comments}\n\n` : ''}View details at: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions${submissionId ? `/${submissionId}` : ''}\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -1002,7 +1002,7 @@ export class EmailService {
             <h2 style="color: #1f2937; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Dear Dr. ${authorName},</h2>
             
             <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px; font-size: 16px;">
-              <strong>Congratulations!</strong> Your research article has been successfully published in the <strong>Advances in Medicine & Health Sciences Journal (AMHSJ)</strong> and is now available online for the global medical community.
+              <strong>Congratulations!</strong> Your research article has been successfully published in the <strong>Advances in Medicine and Health Sciences Journal (AMHSJ)</strong> and is now available online for the global medical community.
             </p>
             
             <!-- Publication Details -->
@@ -1014,7 +1014,7 @@ export class EmailService {
                 <p style="margin: 0 0 8px 0;"><strong>Publication Date:</strong> ${publicationDate}</p>
                 ${volumeNumber ? `<p style="margin: 0 0 8px 0;"><strong>Volume:</strong> ${volumeNumber}</p>` : ''}
                 ${issueNumber ? `<p style="margin: 0 0 8px 0;"><strong>Issue:</strong> ${issueNumber}</p>` : ''}
-                <p style="margin: 0;"><strong>Journal:</strong> Advances in Medicine & Health Sciences Journal (AMHSJ)</p>
+                <p style="margin: 0;"><strong>Journal:</strong> Advances in Medicine and Health Sciences Journal (AMHSJ)</p>
               </div>
             </div>
             
@@ -1064,20 +1064,20 @@ export class EmailService {
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 35px; text-align: center;">
               Questions about your publication? Contact our editorial team at 
-              <a href="mailto:editorial@amhsj.org" style="color: #3b82f6; text-decoration: none;">editorial@amhsj.org</a>
+              <a href="mailto:editorial@AMHSJ.org" style="color: #3b82f6; text-decoration: none;">editorial@AMHSJ.org</a>
             </p>
           </div>
           
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               This email confirms the publication of your article in AMHSJ.
             </p>
           </div>
         </div>
       `,
-      text: `Congratulations Dr. ${authorName}!\n\nYour article "${articleTitle}" has been published in AMHSJ.\n\nPublication Details:\n- DOI: ${doi}\n- Publication Date: ${publicationDate}\n${volumeNumber ? `- Volume: ${volumeNumber}\n` : ''}${issueNumber ? `- Issue: ${issueNumber}\n` : ''}\n\nView your published article: ${this.configService.get("FRONTEND_URL")}/articles/${doi}\nShare your article: ${this.configService.get("FRONTEND_URL")}/articles/${doi}/share\n\nFor questions, contact: editorial@amhsj.org`,
+      text: `Congratulations Dr. ${authorName}!\n\nYour article "${articleTitle}" has been published in AMHSJ.\n\nPublication Details:\n- DOI: ${doi}\n- Publication Date: ${publicationDate}\n${volumeNumber ? `- Volume: ${volumeNumber}\n` : ''}${issueNumber ? `- Issue: ${issueNumber}\n` : ''}\n\nView your published article: ${this.configService.get("FRONTEND_URL")}/articles/${doi}\nShare your article: ${this.configService.get("FRONTEND_URL")}/articles/${doi}/share\n\nFor questions, contact: editorial@AMHSJ.org`,
     }
   }
 
@@ -1090,7 +1090,7 @@ export class EmailService {
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; backdrop-filter: blur(10px);">
               ${this.getLogoHtml()}
               <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">📰 AMHSJ Newsletter</h1>
-              <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine & Health Sciences Journal</p>
+              <p style="color: rgba(255,255,255,0.95); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">Advances in Medicine and Health Sciences Journal</p>
               <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 14px;">Latest Research & Updates</p>
             </div>
           </div>
@@ -1107,7 +1107,7 @@ export class EmailService {
               <div style="color: #4b5563; line-height: 1.6; font-size: 14px;">
                 <p style="margin: 0 0 10px 0;">Follow AMHSJ for the latest updates:</p>
                 <ul style="margin: 0; padding-left: 20px;">
-                  <li>Visit our website: <a href="${this.configService.get("FRONTEND_URL")}" style="color: #3b82f6; text-decoration: none;">amhsj.org</a></li>
+                  <li>Visit our website: <a href="${this.configService.get("FRONTEND_URL")}" style="color: #3b82f6; text-decoration: none;">AMHSJ.org</a></li>
                   <li>Submit your research: <a href="${this.configService.get("FRONTEND_URL")}/dashboard/submissions/new" style="color: #3b82f6; text-decoration: none;">Submit Manuscript</a></li>
                   <li>Join our reviewer network: <a href="${this.configService.get("FRONTEND_URL")}/become-reviewer" style="color: #3b82f6; text-decoration: none;">Become a Reviewer</a></li>
                 </ul>
@@ -1125,7 +1125,7 @@ export class EmailService {
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 25px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
-              © ${new Date().getFullYear()} Advances in Medicine & Health Sciences Journal. All rights reserved.<br>
+              © ${new Date().getFullYear()} Advances in Medicine and Health Sciences Journal. All rights reserved.<br>
               You received this email because you subscribed to AMHSJ updates.
             </p>
           </div>
@@ -1144,3 +1144,6 @@ export class EmailService {
     `
   }
 }
+
+
+

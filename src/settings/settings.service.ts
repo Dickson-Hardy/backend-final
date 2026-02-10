@@ -72,7 +72,7 @@ export class SettingsService {
   private getDefaultSettings(): Record<string, any> {
     return {
       // General Settings
-      siteName: "AMHSJ - Advanced Medical Health Sciences Journal",
+      siteName: "AMHSJ - Advances in Medicine and Health Sciences Journal",
       siteDescription: "A leading medical journal publishing cutting-edge research in health sciences",
       siteUrl: process.env.FRONTEND_URL || "http://localhost:3000",
       adminEmail: process.env.ADMIN_EMAIL || "admin@amhsj.org",
@@ -108,3 +108,5 @@ export class SettingsService {
     }
   }
 }
+
+

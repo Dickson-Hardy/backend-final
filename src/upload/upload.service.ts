@@ -130,6 +130,11 @@ export class UploadService {
   async extractMetadata(file: Express.Multer.File) {
     const fileExtension = path.extname(file.originalname).toLowerCase()
     
+    console.log('📄 Extracting metadata from file:', file.originalname)
+    console.log('📄 File extension:', fileExtension)
+    console.log('📄 File size:', file.size)
+    console.log('📄 Has buffer:', !!file.buffer)
+    
     try {
       switch (fileExtension) {
         case '.pdf':
@@ -143,21 +148,30 @@ export class UploadService {
           throw new BadRequestException('Unsupported file type for metadata extraction')
       }
     } catch (error) {
-      console.error('Error extracting metadata:', error)
+      console.error('❌ Error extracting metadata:', error)
+      console.error('❌ Error stack:', error.stack)
       return {
         success: false,
-        message: 'Failed to extract metadata. Please fill in the details manually.',
-        extracted: {}
+        message: `Failed to extract metadata: ${error.message}`,
+        extracted: {},
+        error: error.message
       }
     }
   }
 
   private async extractPdfMetadata(file: Express.Multer.File) {
     // For PDF extraction, we'll use pdf-parse
+    console.log('📄 Starting PDF extraction...')
     try {
       const pdfParse = require('pdf-parse')
+      console.log('✅ pdf-parse loaded successfully')
+      
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
+      console.log('📄 Buffer size:', dataBuffer.length)
+      
       const data = await pdfParse(dataBuffer)
+      console.log('✅ PDF parsed successfully')
+      console.log('📄 Text length:', data.text.length)
       
       const text = data.text
       const lines = text.split('\n').filter(line => line.trim())
@@ -171,6 +185,8 @@ export class UploadService {
         email: this.extractEmail(text),
       }
       
+      console.log('✅ Metadata extracted:', JSON.stringify(metadata, null, 2))
+      
       return {
         success: true,
         message: 'Metadata extracted successfully',
@@ -178,21 +194,31 @@ export class UploadService {
         fullText: text.substring(0, 5000) // First 5000 chars for preview
       }
     } catch (error) {
-      console.error('PDF extraction error:', error)
+      console.error('❌ PDF extraction error:', error)
+      console.error('❌ Error message:', error.message)
+      console.error('❌ Error stack:', error.stack)
       return {
         success: false,
-        message: 'PDF parsing failed. Please install pdf-parse: npm install pdf-parse',
-        extracted: {}
+        message: 'PDF parsing failed. Please install pdf-parse: pnpm install pdf-parse',
+        extracted: {},
+        error: error.message
       }
     }
   }
 
   private async extractDocxMetadata(file: Express.Multer.File) {
     // For DOCX extraction, we'll use mammoth
+    console.log('📄 Starting DOCX extraction...')
     try {
       const mammoth = require('mammoth')
+      console.log('✅ mammoth loaded successfully')
+      
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
+      console.log('📄 Buffer size:', dataBuffer.length)
+      
       const result = await mammoth.extractRawText({ buffer: dataBuffer })
+      console.log('✅ DOCX parsed successfully')
+      console.log('📄 Text length:', result.value.length)
       
       const text = result.value
       const lines = text.split('\n').filter(line => line.trim())
@@ -205,6 +231,8 @@ export class UploadService {
         email: this.extractEmail(text),
       }
       
+      console.log('✅ Metadata extracted:', JSON.stringify(metadata, null, 2))
+      
       return {
         success: true,
         message: 'Metadata extracted successfully',
@@ -212,11 +240,13 @@ export class UploadService {
         fullText: text.substring(0, 5000)
       }
     } catch (error) {
-      console.error('DOCX extraction error:', error)
+      console.error('❌ DOCX extraction error:', error)
+      console.error('❌ Error message:', error.message)
       return {
         success: false,
-        message: 'DOCX parsing failed. Please install mammoth: npm install mammoth',
-        extracted: {}
+        message: 'DOCX parsing failed. Please install mammoth: pnpm install mammoth',
+        extracted: {},
+        error: error.message
       }
     }
   }

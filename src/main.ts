@@ -120,7 +120,7 @@ async function bootstrap() {
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle("AMHSJ API")
-    .setDescription("Advances in Medicine & Health Sciences Journal API")
+    .setDescription("Advances in Medicine and Health Sciences Journal API")
     .setVersion("1.0")
     .addBearerAuth()
     .build()
@@ -133,3 +133,5 @@ async function bootstrap() {
   console.log(`📚 API Documentation: http://localhost:${port}/api/docs`)
 }
 bootstrap()
+
+
