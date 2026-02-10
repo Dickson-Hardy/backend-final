@@ -163,18 +163,19 @@ export class UploadService {
     // For PDF extraction, we'll use pdf-parse
     console.log('📄 Starting PDF extraction...')
     try {
-      const pdfParse = require('pdf-parse')
+      // Use require for CommonJS module
+      const pdfParseModule = require('pdf-parse')
       console.log('✅ pdf-parse loaded successfully')
       
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
       console.log('📄 Buffer size:', dataBuffer.length)
       
-      const data = await pdfParse(dataBuffer)
+      const data = await pdfParseModule(dataBuffer)
       console.log('✅ PDF parsed successfully')
       console.log('📄 Text length:', data.text.length)
       
       const text = data.text
-      const lines = text.split('\n').filter(line => line.trim())
+      const lines = text.split('\n').filter((line: string) => line.trim())
       
       // Extract metadata using heuristics
       const metadata = {
@@ -210,18 +211,19 @@ export class UploadService {
     // For DOCX extraction, we'll use mammoth
     console.log('📄 Starting DOCX extraction...')
     try {
-      const mammoth = require('mammoth')
+      // Use require for CommonJS module
+      const mammothModule = require('mammoth')
       console.log('✅ mammoth loaded successfully')
       
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
       console.log('📄 Buffer size:', dataBuffer.length)
       
-      const result = await mammoth.extractRawText({ buffer: dataBuffer })
+      const result = await mammothModule.extractRawText({ buffer: dataBuffer })
       console.log('✅ DOCX parsed successfully')
       console.log('📄 Text length:', result.value.length)
       
       const text = result.value
-      const lines = text.split('\n').filter(line => line.trim())
+      const lines = text.split('\n').filter((line: string) => line.trim())
       
       const metadata = {
         title: this.extractTitle(lines),
