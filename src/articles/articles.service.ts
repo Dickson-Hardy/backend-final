@@ -47,8 +47,14 @@ export class ArticlesService {
       featured = true
     }
 
+    // Convert volume string to ObjectId if provided
+    const volumeId = createArticleDto.volume 
+      ? new Types.ObjectId(createArticleDto.volume) 
+      : undefined
+
     const article = new this.articleModel({
       ...createArticleDto,
+      volume: volumeId, // Ensure volume is stored as ObjectId
       authors: createArticleDto.authors, // Store full author objects instead of just IDs
       correspondingAuthor: authorId, // Keep the corresponding author as user ID
       manuscriptFile: manuscriptUpload,
@@ -273,8 +279,14 @@ export class ArticlesService {
       // Add role check here if needed
     }
 
+    // Convert volume string to ObjectId if provided in update
+    const updateData = { ...updateArticleDto }
+    if (updateData.volume) {
+      updateData.volume = new Types.ObjectId(updateData.volume) as any
+    }
+
     const updatedArticle = await this.articleModel
-      .findByIdAndUpdate(id, updateArticleDto, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true })
       .populate('authors', 'firstName lastName email')
       .exec()
 
