@@ -120,6 +120,15 @@ export class Article {
 
   @Prop({ default: false })
   featured: boolean
+
+  @Prop()
+  withdrawalReason: string
+
+  @Prop()
+  withdrawalDate: Date
+
+  @Prop()
+  revisionNotes: string
 }
 
 export const ArticleSchema = SchemaFactory.createForClass(Article)

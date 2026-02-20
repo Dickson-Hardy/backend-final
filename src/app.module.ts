@@ -20,6 +20,8 @@ import { BoardModule } from "./board/board.module"
 import { AnalyticsModule } from "./analytics/analytics.module"
 import { EditorialDecisionsModule } from "./editorial-decisions/editorial-decisions.module"
 import { SettingsModule } from "./settings/settings.module"
+import { SubmissionsModule } from "./submissions/submissions.module"
+import { ReviewWorkflowModule } from "./review-workflow/review-workflow.module"
 import { AppController } from "./app.controller"
 
 @Module({
@@ -53,6 +55,8 @@ import { AppController } from "./app.controller"
     AnalyticsModule,
     EditorialDecisionsModule,
     SettingsModule,
+    SubmissionsModule,
+    ReviewWorkflowModule,
   ],
   controllers: [AppController],
   providers: [],

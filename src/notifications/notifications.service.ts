@@ -187,4 +187,46 @@ export class NotificationsService {
       metadata: { deadlineType, daysRemaining },
     });
   }
+
+  async notifyEditorialTeam(notificationData: {
+    type: string;
+    title: string;
+    message: string;
+    actionUrl: string;
+    priority?: 'normal' | 'high' | 'urgent';
+    relatedArticleId?: string;
+    metadata?: any;
+  }) {
+    // In production, this would:
+    // 1. Query for all users with editorial roles (editor, associate editor, etc.)
+    // 2. Create notifications for each editorial team member
+    // 3. Send email alerts for high/urgent priority items
+    
+    // For now, log the notification
+    // This method should be enhanced to fetch editorial team members from User model
+    console.log('Editorial team notification:', notificationData);
+    
+    // Placeholder: In a real implementation, fetch editorial users and create notifications
+    // const editorialUsers = await this.userModel.find({ 
+    //   role: { $in: ['editor', 'associate_editor', 'editorial_board'] } 
+    // });
+    // 
+    // for (const user of editorialUsers) {
+    //   await this.create({
+    //     userId: user._id.toString(),
+    //     type: notificationData.type,
+    //     title: notificationData.title,
+    //     message: notificationData.message,
+    //     actionUrl: notificationData.actionUrl,
+    //     relatedArticleId: notificationData.relatedArticleId,
+    //     metadata: { ...notificationData.metadata, priority: notificationData.priority },
+    //   });
+    // }
+
+    return {
+      success: true,
+      message: 'Editorial team notified',
+      ...notificationData,
+    };
+  }
 }

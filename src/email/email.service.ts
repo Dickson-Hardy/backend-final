@@ -89,6 +89,96 @@ export class EmailService {
     })
   }
 
+  async sendCoAuthorNotification(to: string, authorName: string, articleTitle: string, correspondingAuthorName: string, submissionId: string): Promise<boolean> {
+    const template = {
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: white; margin: 0;">📝 Manuscript Submitted</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0;">Co-Author Notification</p>
+          </div>
+          <div style="padding: 40px 35px; background: #ffffff;">
+            <h2 style="color: #1f2937; margin-bottom: 25px;">Dear ${authorName},</h2>
+            <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px;">
+              This is to inform you that a manuscript titled "<strong>${articleTitle}</strong>" has been submitted to AMHSJ, 
+              with you listed as a co-author.
+            </p>
+            <div style="background: #eff6ff; padding: 25px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 25px 0;">
+              <p style="margin: 0 0 8px 0;"><strong>Submitted by:</strong> ${correspondingAuthorName} (Corresponding Author)</p>
+              <p style="margin: 0 0 8px 0;"><strong>Manuscript Title:</strong> ${articleTitle}</p>
+              <p style="margin: 0;"><strong>Submission ID:</strong> AMHSJ-${submissionId}</p>
+            </div>
+            <p style="color: #4b5563; line-height: 1.7;">
+              If you have any questions about this submission, please contact the corresponding author or our editorial team.
+            </p>
+          </div>
+          <div style="background: #f9fafb; padding: 25px 35px; text-align: center;">
+            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} AMHSJ. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `Dear ${authorName},\n\nA manuscript titled "${articleTitle}" has been submitted to AMHSJ with you listed as a co-author.\n\nSubmitted by: ${correspondingAuthorName}\nSubmission ID: AMHSJ-${submissionId}\n\nFor questions, please contact the corresponding author or editorial@amhsj.org`,
+    }
+    return this.sendEmail({
+      to,
+      subject: `Co-Author Notification - ${articleTitle}`,
+      template,
+      type: "editorial",
+    })
+  }
+
+  async sendRevisionConfirmation(to: string, authorName: string, articleTitle: string, submissionId: string): Promise<boolean> {
+    const template = {
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: white; margin: 0;">✅ Revision Received</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0;">Resubmission Confirmation</p>
+          </div>
+          <div style="padding: 40px 35px; background: #ffffff;">
+            <h2 style="color: #1f2937; margin-bottom: 25px;">Dear ${authorName},</h2>
+            <p style="color: #4b5563; line-height: 1.7; margin-bottom: 25px;">
+              Thank you for submitting your revised manuscript "<strong>${articleTitle}</strong>" to AMHSJ. 
+              Your revisions have been successfully received and logged in our system.
+            </p>
+            <div style="background: #f0fdf4; padding: 25px; border-radius: 8px; border-left: 4px solid #10b981; margin: 25px 0;">
+              <h3 style="color: #166534; margin: 0 0 15px 0;">Next Steps</h3>
+              <ul style="color: #166534; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Your revised manuscript will be sent back to reviewers for re-evaluation</li>
+                <li>The editorial team will review your response to reviewer comments</li>
+                <li>You will be notified once a decision has been made</li>
+                <li>Typical review time for revisions is 7-14 days</li>
+              </ul>
+            </div>
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}" 
+                 style="background: #10b981; color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
+                Track Submission
+              </a>
+            </div>
+             <p style="color: #6b7280; font-size: 14px; text-align: center;">
+              Questions? Contact <a href="mailto:editorial@amhsj.org" style="color: #3b82f6;">editorial@amhsj.org</a>
+            </p>
+          </div>
+          <div style="background: #f9fafb; padding: 25px 35px; text-align: center;">
+            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} AMHSJ. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `Dear ${authorName},\n\nYour revised manuscript "${articleTitle}" has been successfully received.\n\nNext steps:\n- Manuscript will be re-reviewed\n- Editorial team will assess your revisions\n- You will be notified of the decision within 7-14 days\n\nTrack your submission: ${this.configService.get("FRONTEND_URL")}/dashboard/submissions/${submissionId}\n\nQuestions? Contact: editorial@amhsj.org`,
+    }
+    return this.sendEmail({
+      to,
+      subject: `Revision Received - ${articleTitle}`,
+      template,
+      type: "editorial",
+    })
+  }
+
   async sendStatusUpdate(to: string, authorName: string, articleTitle: string, status: string, submissionId: string): Promise<boolean> {
     const template = this.getStatusUpdateTemplate(authorName, articleTitle, status, submissionId)
     return this.sendEmail({
