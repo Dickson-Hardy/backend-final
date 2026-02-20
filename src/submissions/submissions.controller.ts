@@ -51,7 +51,7 @@ export class SubmissionsController {
     @Request() req: any,
     @Query('status') status?: string
   ) {
-    return this.submissionsService.getAuthorSubmissions(req.user.id, status);
+    return this.submissionsService.getAuthorSubmissions(req.user.id, status as any);
   }
 
   @Get('stats')

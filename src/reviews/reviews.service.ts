@@ -5,6 +5,7 @@ import { Review, ReviewDocument, ReviewStatus } from './schemas/review.schema';
 import { CreateReviewDto, SubmitReviewDto, UpdateReviewStatusDto } from './dto/create-review.dto';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/schemas/notification.schema';
 import { UserDocument } from '../users/schemas/user.schema';
 import { ArticleDocument } from '../articles/schemas/article.schema';
 
@@ -75,7 +76,7 @@ export class ReviewsService {
     // Create notification for reviewer
     await this.notificationsService.create({
       userId: createReviewDto.reviewerId,
-      type: 'review_invitation',
+      type: NotificationType.REVIEW_ASSIGNED,
       title: 'New Review Invitation',
       message: `You have been invited to review "${article.title}"`,
       actionUrl: `/dashboard/reviewer/review/${savedReview._id}`,
@@ -161,7 +162,7 @@ export class ReviewsService {
 
     // Create notification for editorial team
     await this.notificationsService.notifyEditorialTeam({
-      type: 'review_completed',
+      type: NotificationType.REVIEW_SUBMITTED,
       title: 'Review Completed',
       message: `Review completed for "${article.title}" by ${reviewer.firstName} ${reviewer.lastName}`,
       actionUrl: `/dashboard/editorial/articles/${article._id}`,
@@ -203,7 +204,7 @@ export class ReviewsService {
     // Create notification for reviewer
     await this.notificationsService.create({
       userId: reviewerId,
-      type: 'review_accepted',
+      type: NotificationType.REVIEW_ASSIGNED,
       title: 'Review Assignment Confirmed',
       message: `You have accepted the review for "${article.title}"`,
       actionUrl: `/dashboard/reviewer/review/${id}`,
@@ -211,7 +212,7 @@ export class ReviewsService {
 
     // Notify editorial team
     await this.notificationsService.notifyEditorialTeam({
-      type: 'reviewer_accepted',
+      type: NotificationType.GENERAL,
       title: 'Reviewer Accepted Assignment',
       message: `${reviewer.firstName} ${reviewer.lastName} accepted review for "${article.title}"`,
       actionUrl: `/dashboard/editorial/articles/${article._id}`,
@@ -249,7 +250,7 @@ export class ReviewsService {
 
     // Notify editorial team about declined review
     await this.notificationsService.notifyEditorialTeam({
-      type: 'reviewer_declined',
+      type: NotificationType.GENERAL,
       title: 'Reviewer Declined Assignment',
       message: `${reviewer.firstName} ${reviewer.lastName} declined review for "${article.title}". Reason: ${reason}`,
       actionUrl: `/dashboard/editorial/articles/${article._id}`,
@@ -415,7 +416,7 @@ export class ReviewsService {
     // Create notification
     await this.notificationsService.create({
       userId: review.reviewerId.toString(),
-      type: 'review_reminder',
+      type: NotificationType.DEADLINE_APPROACHING,
       title: 'Review Reminder',
       message: review.status === ReviewStatus.IN_PROGRESS
         ? `Reminder: Please complete your review for "${article.title}" by ${review.dueDate.toLocaleDateString()}`

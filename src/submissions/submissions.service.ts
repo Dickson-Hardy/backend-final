@@ -75,7 +75,7 @@ export class SubmissionsService {
           name: `${author.firstName} ${author.lastName}`,
           email: author.email,
         },
-        submissionIp: author.lastLoginIp || 'unknown',
+        submissionIp: 'unknown',
         submissionDate: new Date(),
       },
     });
@@ -114,7 +114,7 @@ export class SubmissionsService {
 
     // Notify editorial team about new submission
     await this.notificationsService.notifyEditorialTeam({
-      type: NotificationType.NEW_SUBMISSION,
+      type: NotificationType.SUBMISSION_RECEIVED,
       title: 'New Submission Received',
       message: `New article "${savedArticle.title}" submitted by ${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`,
       actionUrl: `/dashboard/editorial/submissions/${savedArticle._id}`,
@@ -207,7 +207,67 @@ export class SubmissionsService {
 
     // Validate revision notes are provided
     if (!revisionDto.revisionNotes || revisionDto.revisionNotes.trim().length < 50) {
-      throw new BadRequestException(\n        'Please provide detailed revision notes (minimum 50 characters) explaining changes made'\n      );\n    }\n\n    // Update submission with revision\n    const updatedSubmission = await this.articleModel.findByIdAndUpdate(\n      submissionId,\n      {\n        ...revisionDto,\n        status: ArticleStatus.UNDER_REVIEW,\n        resubmissionDate: new Date(),\n        revisionNotes: revisionDto.revisionNotes,\n        revisionCount: (submission.metadata?.revisionCount || 0) + 1,\n        'metadata.lastRevisionDate': new Date(),\n        'metadata.revisionHistory': [\n          ...(submission.metadata?.revisionHistory || []),\n          {\n            date: new Date(),\n            notes: revisionDto.revisionNotes,\n            fileUpdated: !!files?.manuscript,\n          },\n        ],\n      },\n      { new: true }\n    ).populate('authors volume');\n\n    // Get author details\n    const author = await this.userModel.findById(authorId);\n    const correspondingAuthor = submission.authors[0];\n\n    // Send confirmation email to author\n    await this.emailService.sendRevisionConfirmation(\n      typeof correspondingAuthor === 'object' && 'email' in correspondingAuthor\n        ? correspondingAuthor.email\n        : author.email,\n      `${author.firstName} ${author.lastName}`,\n      submission.title,\n      submissionId\n    );\n\n    // Notify author\n    await this.notificationsService.create({\n      userId: authorId,\n      type: NotificationType.REVISION_SUBMITTED,\n      title: 'Revision Submitted',\n      message: `Your revised manuscript \"${submission.title}\" has been resubmitted for review`,\n      actionUrl: `/dashboard/submissions/${submissionId}`,\n    });\n\n    // Notify editorial team with detailed info\n    await this.notificationsService.notifyEditorialTeam({\n      type: NotificationType.REVISION_SUBMITTED,\n      title: 'Revised Manuscript Received',\n      message: `Revised version of \"${submission.title}\" submitted by ${author.firstName} ${author.lastName}`,\n      actionUrl: `/dashboard/editorial/submissions/${submissionId}`,\n      priority: 'high',\n    });\n\n    // If there were assigned reviewers, notify them\n    if (submission.assignedReviewers && submission.assignedReviewers.length > 0) {\n      for (const reviewerId of submission.assignedReviewers) {\n        await this.notificationsService.create({\n          userId: reviewerId.toString(),\n          type: NotificationType.MANUSCRIPT_REVISED,\n          title: 'Manuscript Revised',\n          message: `The manuscript \"${submission.title}\" has been revised and is ready for re-review`,\n          actionUrl: `/dashboard/reviewer/review/${submissionId}`,\n        });\n      }\n    }\n\n    return updatedSubmission;\n  }
+      throw new BadRequestException(
+        'Please provide detailed revision notes (minimum 50 characters) explaining changes made'
+      );
+    }
+
+    // Update submission with revision
+    const updatedSubmission = await this.articleModel.findByIdAndUpdate(
+      submissionId,
+      {
+        ...revisionDto,
+        status: ArticleStatus.UNDER_REVIEW,
+        resubmissionDate: new Date(),
+        revisionNotes: revisionDto.revisionNotes,
+        revisionCount: ((submission as any).metadata?.revisionCount || 0) + 1,
+        'metadata.lastRevisionDate': new Date(),
+        'metadata.revisionHistory': [
+          ...((submission as any).metadata?.revisionHistory || []),
+          {
+            date: new Date(),
+            notes: revisionDto.revisionNotes,
+            fileUpdated: !!files?.manuscript,
+          },
+        ],
+      },
+      { new: true }
+    ).populate('authors volume');
+
+    // Get author details
+    const author = await this.userModel.findById(authorId);
+    const correspondingAuthor = submission.authors[0];
+
+    // Send confirmation email to author
+    await this.emailService.sendRevisionConfirmation(
+      typeof correspondingAuthor === 'object' && 'email' in correspondingAuthor
+        ? (correspondingAuthor as any).email
+        : author.email,
+      `${author.firstName} ${author.lastName}`,
+      submission.title,
+      submissionId
+    );
+
+    // Notify author
+    await this.notificationsService.create({
+      userId: authorId,
+      type: NotificationType.REVISION_SUBMITTED,
+      title: 'Revision Submitted',
+      message: `Your revised manuscript "${submission.title}" has been resubmitted for review`,
+      actionUrl: `/dashboard/submissions/${submissionId}`,
+    });
+
+    // Notify editorial team with detailed info
+    await this.notificationsService.notifyEditorialTeam({
+      type: NotificationType.REVISION_SUBMITTED,
+      title: 'Revised Manuscript Received',
+      message: `Revised version of "${submission.title}" submitted by ${author.firstName} ${author.lastName}`,
+      actionUrl: `/dashboard/editorial/submissions/${submissionId}`,
+      priority: 'high',
+    });
+
+    return updatedSubmission;
+  }
 
   async withdrawSubmission(submissionId: string, authorId: string, reason: string): Promise<Article> {
     const submission = await this.getSubmissionById(submissionId, authorId);

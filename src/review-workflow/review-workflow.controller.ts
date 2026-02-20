@@ -59,7 +59,7 @@ export class ReviewWorkflowController {
     @Request() req: any,
     @Query('status') status?: string
   ) {
-    return this.reviewWorkflowService.getReviewsForReviewer(req.user.id, status);
+    return this.reviewWorkflowService.getReviewsForReviewer(req.user.id, status as any);
   }
 
   @Get('my-stats')
