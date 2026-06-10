@@ -179,24 +179,25 @@ export class AdminController {
     @Request() req
   ) {
     // Parse JSON fields from multipart form data if present
+    // Use !== undefined checks (not truthy) so empty strings can clear fields
     const updateArticleDto: AdminUpdateArticleDto = {
-      ...(body.title && { title: body.title }),
-      ...(body.abstract && { abstract: body.abstract }),
-      ...(body.content && { content: body.content }),
-      ...(body.type && { type: body.type }),
-      ...(body.status && { status: body.status }),
-      ...(body.keywords && { keywords: typeof body.keywords === 'string' ? JSON.parse(body.keywords) : body.keywords }),
-      ...(body.authors && { authors: typeof body.authors === 'string' ? JSON.parse(body.authors) : body.authors }),
-      ...(body.volume && { volume: body.volume }),
-      ...(body.doi && { doi: body.doi }),
-      ...(body.pages && { pages: body.pages }),
-      ...(body.articleNumber && { articleNumber: body.articleNumber }),
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.abstract !== undefined && { abstract: body.abstract }),
+      ...(body.content !== undefined && { content: body.content }),
+      ...(body.type !== undefined && { type: body.type }),
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.keywords !== undefined && { keywords: typeof body.keywords === 'string' ? JSON.parse(body.keywords) : body.keywords }),
+      ...(body.authors !== undefined && { authors: typeof body.authors === 'string' ? JSON.parse(body.authors) : body.authors }),
+      ...(body.volume !== undefined && { volume: body.volume }),
+      ...(body.doi !== undefined && { doi: body.doi }),
+      ...(body.pages !== undefined && { pages: body.pages }),
+      ...(body.articleNumber !== undefined && { articleNumber: body.articleNumber }),
       ...(body.featured !== undefined && { featured: body.featured === 'true' || body.featured === true }),
-      ...(body.conflictOfInterest && { conflictOfInterest: body.conflictOfInterest }),
-      ...(body.funding && { funding: body.funding }),
-      ...(body.acknowledgments && { acknowledgments: body.acknowledgments }),
-      ...(body.categories && { categories: typeof body.categories === 'string' ? JSON.parse(body.categories) : body.categories }),
-      ...(body.references && { references: typeof body.references === 'string' ? JSON.parse(body.references) : body.references }),
+      ...(body.conflictOfInterest !== undefined && { conflictOfInterest: body.conflictOfInterest }),
+      ...(body.funding !== undefined && { funding: body.funding }),
+      ...(body.acknowledgments !== undefined && { acknowledgments: body.acknowledgments }),
+      ...(body.categories !== undefined && { categories: typeof body.categories === 'string' ? JSON.parse(body.categories) : body.categories }),
+      ...(body.references !== undefined && { references: typeof body.references === 'string' ? JSON.parse(body.references) : body.references }),
     }
     
     return this.adminService.updateArticle(id, updateArticleDto, files, req.user.id)
