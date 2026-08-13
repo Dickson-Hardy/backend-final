@@ -16,7 +16,9 @@ async function bootstrap() {
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_WWW, // For www subdomain
     process.env.FRONTEND_URL_ADMIN, // For admin subdomain if needed
-  ].filter(Boolean) // Remove undefined values
+  ]
+    .filter((origin): origin is string => Boolean(origin))
+    .map(origin => origin.replace(/\/$/, ''))
 
   // Development origins
   const developmentOrigins = [
@@ -29,14 +31,16 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
+      // CORS is a browser-origin policy. Render health checks, direct API
+      // navigation, command-line clients, and server-to-server requests may
+      // legitimately omit the Origin header.
+      if (!origin) {
+        return callback(null, true)
+      }
+
       // In production, be more strict about origins
       if (isProduction) {
-        // Only allow requests with valid origins in production
-        if (!origin) {
-          return callback(new Error('Origin header is required in production'))
-        }
-        
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin.replace(/\/$/, ''))) {
           callback(null, true)
         } else {
           console.warn(`🚫 CORS blocked request from origin: ${origin}`)
