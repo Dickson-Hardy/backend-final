@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
-import { GitHubStorageService } from "./services/github-storage.service"
+import { CloudflareR2StorageService } from "./services/cloudflare-r2.service"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -20,16 +20,16 @@ export interface UploadResult {
 export class UploadService {
   constructor(
     private configService: ConfigService,
-    private githubStorage: GitHubStorageService,
+    private r2Storage: CloudflareR2StorageService,
   ) {}
 
   async uploadFile(file: Express.Multer.File): Promise<UploadResult> {
     try {
-      const result = await this.githubStorage.uploadFile(file, 'uploads')
+      const result = await this.r2Storage.uploadFile(file, 'uploads')
       return {
-        publicId: result.assetId.toString(),
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl,
+        publicId: result.key,
+        url: result.url,
+        secureUrl: result.url,
         format: result.format,
         bytes: result.size,
         originalName: result.originalName,
@@ -49,11 +49,11 @@ export class UploadService {
 
   async uploadManuscript(file: Express.Multer.File): Promise<UploadResult> {
     try {
-      const result = await this.githubStorage.uploadFile(file, 'manuscripts')
+      const result = await this.r2Storage.uploadFile(file, 'manuscripts')
       return {
-        publicId: result.assetId.toString(),
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl,
+        publicId: result.key,
+        url: result.url,
+        secureUrl: result.url,
         format: result.format,
         bytes: result.size,
         originalName: result.originalName,
@@ -66,11 +66,11 @@ export class UploadService {
 
   async uploadSupplementary(file: Express.Multer.File): Promise<UploadResult> {
     try {
-      const result = await this.githubStorage.uploadFile(file, 'supplementary')
+      const result = await this.r2Storage.uploadFile(file, 'supplementary')
       return {
-        publicId: result.assetId.toString(),
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl,
+        publicId: result.key,
+        url: result.url,
+        secureUrl: result.url,
         format: result.format,
         bytes: result.size,
         originalName: result.originalName,
@@ -83,11 +83,11 @@ export class UploadService {
 
   async uploadNews(file: Express.Multer.File): Promise<UploadResult> {
     try {
-      const result = await this.githubStorage.uploadFile(file, 'news')
+      const result = await this.r2Storage.uploadFile(file, 'news')
       return {
-        publicId: result.assetId.toString(),
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl,
+        publicId: result.key,
+        url: result.url,
+        secureUrl: result.url,
         format: result.format,
         bytes: result.size,
         originalName: result.originalName,
@@ -100,11 +100,11 @@ export class UploadService {
 
   async uploadProfile(file: Express.Multer.File): Promise<UploadResult> {
     try {
-      const result = await this.githubStorage.uploadFile(file, 'profiles')
+      const result = await this.r2Storage.uploadFile(file, 'profiles')
       return {
-        publicId: result.assetId.toString(),
-        url: result.downloadUrl,
-        secureUrl: result.downloadUrl,
+        publicId: result.key,
+        url: result.url,
+        secureUrl: result.url,
         format: result.format,
         bytes: result.size,
         originalName: result.originalName,
@@ -117,11 +117,7 @@ export class UploadService {
 
   async deleteFile(publicId: string): Promise<void> {
     try {
-      const assetId = parseInt(publicId, 10)
-      if (isNaN(assetId)) {
-        throw new Error('Invalid asset ID')
-      }
-      await this.githubStorage.deleteFile(assetId)
+      await this.r2Storage.deleteFile(publicId)
     } catch (error) {
       throw new BadRequestException(`Failed to delete file: ${error.message}`)
     }
@@ -129,11 +125,6 @@ export class UploadService {
 
   async extractMetadata(file: Express.Multer.File) {
     const fileExtension = path.extname(file.originalname).toLowerCase()
-    
-    console.log('📄 Extracting metadata from file:', file.originalname)
-    console.log('📄 File extension:', fileExtension)
-    console.log('📄 File size:', file.size)
-    console.log('📄 Has buffer:', !!file.buffer)
     
     try {
       switch (fileExtension) {
@@ -148,8 +139,6 @@ export class UploadService {
           throw new BadRequestException('Unsupported file type for metadata extraction')
       }
     } catch (error) {
-      console.error('❌ Error extracting metadata:', error)
-      console.error('❌ Error stack:', error.stack)
       return {
         success: false,
         message: `Failed to extract metadata: ${error.message}`,
@@ -160,24 +149,14 @@ export class UploadService {
   }
 
   private async extractPdfMetadata(file: Express.Multer.File) {
-    // For PDF extraction, we'll use pdf-parse
-    console.log('📄 Starting PDF extraction...')
     try {
-      // Use require for CommonJS module
       const pdfParseModule = require('pdf-parse')
-      console.log('✅ pdf-parse loaded successfully')
-      
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
-      console.log('📄 Buffer size:', dataBuffer.length)
-      
       const data = await pdfParseModule(dataBuffer)
-      console.log('✅ PDF parsed successfully')
-      console.log('📄 Text length:', data.text.length)
       
       const text = data.text
       const lines = text.split('\n').filter((line: string) => line.trim())
       
-      // Extract metadata using heuristics
       const metadata = {
         title: this.extractTitle(lines),
         abstract: this.extractAbstract(text),
@@ -186,18 +165,13 @@ export class UploadService {
         email: this.extractEmail(text),
       }
       
-      console.log('✅ Metadata extracted:', JSON.stringify(metadata, null, 2))
-      
       return {
         success: true,
         message: 'Metadata extracted successfully',
         extracted: metadata,
-        fullText: text.substring(0, 5000) // First 5000 chars for preview
+        fullText: text.substring(0, 5000)
       }
     } catch (error) {
-      console.error('❌ PDF extraction error:', error)
-      console.error('❌ Error message:', error.message)
-      console.error('❌ Error stack:', error.stack)
       return {
         success: false,
         message: 'PDF parsing failed. Please install pdf-parse: pnpm install pdf-parse',
@@ -208,19 +182,10 @@ export class UploadService {
   }
 
   private async extractDocxMetadata(file: Express.Multer.File) {
-    // For DOCX extraction, we'll use mammoth
-    console.log('📄 Starting DOCX extraction...')
     try {
-      // Use require for CommonJS module
       const mammothModule = require('mammoth')
-      console.log('✅ mammoth loaded successfully')
-      
       const dataBuffer = file.buffer || fs.readFileSync(file.path)
-      console.log('📄 Buffer size:', dataBuffer.length)
-      
       const result = await mammothModule.extractRawText({ buffer: dataBuffer })
-      console.log('✅ DOCX parsed successfully')
-      console.log('📄 Text length:', result.value.length)
       
       const text = result.value
       const lines = text.split('\n').filter((line: string) => line.trim())
@@ -233,8 +198,6 @@ export class UploadService {
         email: this.extractEmail(text),
       }
       
-      console.log('✅ Metadata extracted:', JSON.stringify(metadata, null, 2))
-      
       return {
         success: true,
         message: 'Metadata extracted successfully',
@@ -242,8 +205,6 @@ export class UploadService {
         fullText: text.substring(0, 5000)
       }
     } catch (error) {
-      console.error('❌ DOCX extraction error:', error)
-      console.error('❌ Error message:', error.message)
       return {
         success: false,
         message: 'DOCX parsing failed. Please install mammoth: pnpm install mammoth',
@@ -273,7 +234,6 @@ export class UploadService {
         fullText: text.substring(0, 5000)
       }
     } catch (error) {
-      console.error('TXT extraction error:', error)
       return {
         success: false,
         message: 'Failed to read text file',

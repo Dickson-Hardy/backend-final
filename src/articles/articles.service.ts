@@ -3,10 +3,15 @@ import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
 import { Article, ArticleDocument, ArticleStatus } from './schemas/article.schema'
 import { Volume, VolumeDocument } from '../volumes/schemas/volume.schema'
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 import { CreateArticleDto } from './dto/create-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
 import { UploadService } from '../upload/upload.service'
 import { EmailService } from '../email/email.service'
+import { UsersService } from '../users/users.service'
 import { Express } from 'express'
 
 @Injectable()
@@ -15,7 +20,8 @@ export class ArticlesService {
     @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
     @InjectModel(Volume.name) private volumeModel: Model<VolumeDocument>,
     private uploadService: UploadService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private usersService: UsersService
   ) {}
 
   async create(
@@ -123,10 +129,11 @@ export class ArticlesService {
       query.categories = filters.category
     }
     if (filters.search) {
+      const escaped = escapeRegex(filters.search)
       query.$or = [
-        { title: { $regex: filters.search, $options: 'i' } },
-        { abstract: { $regex: filters.search, $options: 'i' } },
-        { keywords: { $in: [new RegExp(filters.search, 'i')] } },
+        { title: { $regex: escaped, $options: 'i' } },
+        { abstract: { $regex: escaped, $options: 'i' } },
+        { keywords: { $in: [new RegExp(escaped, 'i')] } },
       ]
     }
 
@@ -173,12 +180,13 @@ export class ArticlesService {
       query.featured = true
     }
     if (filters.search) {
+      const escaped = escapeRegex(filters.search)
       query.$or = [
-        { title: { $regex: filters.search, $options: 'i' } },
-        { abstract: { $regex: filters.search, $options: 'i' } },
-        { keywords: { $in: [new RegExp(filters.search, 'i')] } },
-        { 'authors.firstName': { $regex: filters.search, $options: 'i' } },
-        { 'authors.lastName': { $regex: filters.search, $options: 'i' } },
+        { title: { $regex: escaped, $options: 'i' } },
+        { abstract: { $regex: escaped, $options: 'i' } },
+        { keywords: { $in: [new RegExp(escaped, 'i')] } },
+        { 'authors.firstName': { $regex: escaped, $options: 'i' } },
+        { 'authors.lastName': { $regex: escaped, $options: 'i' } },
       ]
     }
 
@@ -302,15 +310,16 @@ export class ArticlesService {
     return article
   }
 
-  async update(id: string, updateArticleDto: UpdateArticleDto, userId: string): Promise<Article> {
+  async update(id: string, updateArticleDto: UpdateArticleDto, userId: string, userRole?: string): Promise<Article> {
     const article = await this.articleModel.findById(id)
     if (!article) {
       throw new NotFoundException('Article not found')
     }
 
-    // Check if user is author or has editorial permissions
-    if (article.authors[0].toString() !== userId) {
-      // Add role check here if needed
+    // Only admin, editor-in-chief, editorial board, or associate editor can update articles
+    const allowedRoles = ['admin', 'editor_in_chief', 'editorial_board', 'associate_editor']
+    if (userRole && !allowedRoles.includes(userRole)) {
+      throw new BadRequestException('You do not have permission to update this article')
     }
 
     // Convert volume string to ObjectId if provided in update
@@ -322,6 +331,10 @@ export class ArticlesService {
     const updatedArticle = await this.articleModel
       .findByIdAndUpdate(id, updateData, { new: true })
       .exec()
+
+    if (!updatedArticle) {
+      throw new NotFoundException('Article not found after update')
+    }
 
     return updatedArticle
   }
@@ -386,7 +399,16 @@ export class ArticlesService {
       .exec()
 
     // Send status update email to author
-    await this.emailService.sendStatusUpdate(article.authors[0].toString(), article.authors[0].toString(), article.title, status, article._id.toString())
+    const author = article.authors[0]
+    if (author?.email) {
+      await this.emailService.sendStatusUpdate(
+        author.email,
+        `${author.firstName} ${author.lastName}`,
+        article.title,
+        status,
+        article._id.toString()
+      )
+    }
 
     return updatedArticle
   }
@@ -410,7 +432,16 @@ export class ArticlesService {
       .exec()
 
     // Send review assignment email
-    await this.emailService.sendReviewAssignment(reviewerId, reviewerId, article.title, new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), article._id.toString())
+    const reviewer = await this.usersService.findOne(reviewerId)
+    if (reviewer?.email) {
+      await this.emailService.sendReviewAssignment(
+        reviewer.email,
+        `${reviewer.firstName} ${reviewer.lastName}`,
+        article.title,
+        new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        article._id.toString()
+      )
+    }
 
     return updatedArticle
   }
@@ -447,7 +478,16 @@ export class ArticlesService {
       .exec()
 
     // Notify editor about completed review
-    await this.emailService.sendReviewCompleted(article.authors[0].toString(), article.authors[0].toString(), article.title, article._id.toString())
+    // Find the editor who assigned the review (first author as fallback)
+    const editor = await this.usersService.findOne(article.authors[0].toString())
+    if (editor?.email) {
+      await this.emailService.sendReviewCompleted(
+        editor.email,
+        `${editor.firstName} ${editor.lastName}`,
+        article.title,
+        article._id.toString()
+      )
+    }
 
     return updatedArticle
   }
@@ -520,13 +560,6 @@ export class ArticlesService {
     volumeId?: string,
     filters: { search?: string; category?: string; status?: string } = {}
   ) {
-    const allArticles = await this.articleModel.find({}).exec()
-    
-    // If no articles exist, return empty result
-    if (allArticles.length === 0) {
-      return { articles: [], total: 0 }
-    }
-
     const query: any = {}
     
     // Apply filters
@@ -539,11 +572,12 @@ export class ArticlesService {
     }
 
     if (filters.search) {
-      const searchRegex = { $regex: filters.search, $options: 'i' }
+      const escaped = escapeRegex(filters.search)
+      const searchRegex = { $regex: escaped, $options: 'i' }
       query.$or = [
         { title: searchRegex },
         { abstract: searchRegex },
-        { keywords: { $in: [new RegExp(filters.search, 'i')] } }
+        { keywords: { $in: [new RegExp(escaped, 'i')] } }
       ]
     }
 

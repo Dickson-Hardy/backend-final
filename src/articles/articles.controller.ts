@@ -44,23 +44,34 @@ export class ArticlesController {
       throw new BadRequestException('Manuscript file is required')
     }
     
-    // Debug logging
-    
     // Parse JSON fields from multipart form data
+    let keywords: string[] = []
+    let authors: any[] = []
+    let categories: string[] = []
+    let references: string[] = []
+    try {
+      keywords = body.keywords ? JSON.parse(body.keywords) : []
+      authors = body.authors ? JSON.parse(body.authors) : []
+      categories = body.categories ? JSON.parse(body.categories) : []
+      references = body.references ? JSON.parse(body.references) : []
+    } catch {
+      throw new BadRequestException('Invalid JSON in keywords, authors, categories, or references')
+    }
+
     const createArticleDto: CreateArticleDto = {
       title: body.title,
       abstract: body.abstract,
       content: body.content,
       type: body.type,
-      keywords: body.keywords ? JSON.parse(body.keywords) : [],
-      authors: body.authors ? JSON.parse(body.authors) : [],
+      keywords,
+      authors,
       correspondingAuthorEmail: body.correspondingAuthorEmail,
       volume: body.volume,
-      categories: body.categories ? JSON.parse(body.categories) : [],
+      categories,
       funding: body.funding,
       acknowledgments: body.acknowledgments,
       conflictOfInterest: body.conflictOfInterest,
-      references: body.references ? JSON.parse(body.references) : [],
+      references,
     }
     
     
@@ -68,6 +79,7 @@ export class ArticlesController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   async findAll(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
@@ -172,20 +184,16 @@ export class ArticlesController {
     return this.articlesService.findAvailableForVolume(volumeId, { search, category, status })
   }
 
-  @Get('debug/all')
-  async debugAllArticles() {
-    return this.articlesService.findAll(1, 100)
-  }
-
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.articlesService.findOne(id)
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF, UserRole.EDITORIAL_BOARD, UserRole.ASSOCIATE_EDITOR)
   async update(@Param('id') id: string, @Body() updateArticleDto: UpdateArticleDto, @Request() req) {
-    return this.articlesService.update(id, updateArticleDto, req.user.id)
+    return this.articlesService.update(id, updateArticleDto, req.user.id, req.user.role)
   }
 
   @Patch(':id/article-number')

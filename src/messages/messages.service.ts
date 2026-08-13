@@ -4,22 +4,26 @@ import { Model, Types } from 'mongoose';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class MessagesService {
   constructor(
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createMessageDto: CreateMessageDto, senderId: string, senderName: string, senderRole: string) {
-    // Get recipient info - in production, you'd fetch this from the Users collection
+    // Fetch recipient info from users service
+    const recipient = await this.usersService.findById(createMessageDto.recipientId);
+    
     const message = new this.messageModel({
       ...createMessageDto,
       senderId: new Types.ObjectId(senderId),
       senderName,
       senderRole,
-      recipientName: 'Recipient Name', // TODO: Fetch from user service
-      recipientRole: 'Recipient Role', // TODO: Fetch from user service
+      recipientName: recipient ? `${recipient.firstName} ${recipient.lastName}` : 'Unknown User',
+      recipientRole: recipient?.role || 'User',
     });
 
     return message.save();
@@ -112,13 +116,16 @@ export class MessagesService {
     relatedArticleId?: string,
     relatedArticleTitle?: string,
   ) {
+    // Fetch recipient info from users service
+    const recipient = await this.usersService.findById(recipientId);
+    
     const systemMessage = new this.messageModel({
       senderId: new Types.ObjectId('000000000000000000000000'), // System user ID
       senderName: 'Journal Bot',
       senderRole: 'System Notification',
       recipientId: new Types.ObjectId(recipientId),
-      recipientName: 'User', // TODO: Fetch from user service
-      recipientRole: 'User', // TODO: Fetch from user service
+      recipientName: recipient ? `${recipient.firstName} ${recipient.lastName}` : 'Unknown User',
+      recipientRole: recipient?.role || 'User',
       subject,
       body,
       relatedArticleId: relatedArticleId ? new Types.ObjectId(relatedArticleId) : undefined,

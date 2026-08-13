@@ -42,11 +42,12 @@ export class UsersService {
       query.role = filters.role
     }
     if (filters.search) {
+      const escaped = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       query.$or = [
-        { firstName: { $regex: filters.search, $options: 'i' } },
-        { lastName: { $regex: filters.search, $options: 'i' } },
-        { email: { $regex: filters.search, $options: 'i' } },
-        { affiliation: { $regex: filters.search, $options: 'i' } },
+        { firstName: { $regex: escaped, $options: 'i' } },
+        { lastName: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { affiliation: { $regex: escaped, $options: 'i' } },
       ]
     }
 

@@ -3,7 +3,7 @@ import { ConfigModule } from "@nestjs/config"
 import { MulterModule } from "@nestjs/platform-express"
 import { UploadController } from "./upload.controller"
 import { UploadService } from "./upload.service"
-import { GitHubStorageService } from "./services/github-storage.service"
+import { CloudflareR2StorageService } from "./services/cloudflare-r2.service"
 import { RolesGuard } from "../auth/guards/roles.guard"
 import * as multer from "multer"
 
@@ -11,14 +11,14 @@ import * as multer from "multer"
   imports: [
     ConfigModule,
     MulterModule.register({
-      storage: multer.memoryStorage(), // Store files in memory as buffers
+      storage: multer.memoryStorage(),
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 50 * 1024 * 1024, // 50MB limit (R2 supports larger files)
       },
     }),
   ],
   controllers: [UploadController],
-  providers: [UploadService, GitHubStorageService, RolesGuard],
+  providers: [UploadService, CloudflareR2StorageService, RolesGuard],
   exports: [UploadService],
 })
 export class UploadModule {}

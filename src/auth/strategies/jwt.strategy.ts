@@ -15,15 +15,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any): Promise<User> {
-    console.log('🔍 JWT Strategy validate - payload:', payload)
-    console.log('🔍 JWT Strategy validate - payload.sub:', payload.sub)
-    
     const user = await this.authService.validateUserById(payload.sub)
-    console.log('🔍 JWT Strategy validate - user found:', user ? 'Yes' : 'No')
-    console.log('🔍 JWT Strategy validate - user role:', user?.role)
-    
     if (!user) {
-      console.log('❌ JWT Strategy validate - User not found')
       throw new UnauthorizedException()
     }
     return user

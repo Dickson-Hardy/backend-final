@@ -20,10 +20,6 @@ export class VolumesService {
   }
 
   async create(createVolumeDto: CreateVolumeDto, userRole?: string): Promise<Volume> {
-    console.log('📝 Backend received volume data:', createVolumeDto)
-    console.log('📝 Volume data type:', typeof createVolumeDto)
-    console.log('📝 Volume data keys:', Object.keys(createVolumeDto))
-    
     // Determine volume status based on user role
     let volumeStatus = createVolumeDto.status || 'draft'
     
@@ -169,8 +165,6 @@ export class VolumesService {
   }
 
   async getVolumeArticles(id: string): Promise<any[]> {
-    console.log('🚀 getVolumeArticles called with ID:', id)
-    
     // Validate the ObjectId
     if (!id || id === 'undefined' || id === 'null' || !Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`Invalid volume ID: ${id}`)
@@ -182,10 +176,6 @@ export class VolumesService {
       throw new NotFoundException(`Volume with ID ${id} not found`)
     }
     
-    console.log('📝 Raw volume articles:', rawVolume.articles)
-    console.log('📝 Articles field type:', typeof rawVolume.articles)
-    console.log('📝 First article type:', rawVolume.articles?.[0] ? typeof rawVolume.articles[0] : 'none')
-    
     // Try to populate the articles
     const volume = await this.volumeModel
       .findById(id)
@@ -195,19 +185,14 @@ export class VolumesService {
       })
       .exec()
     
-    console.log('📝 Volume articles after populate:', volume.articles)
-    console.log('📝 First populated article:', volume.articles?.[0])
-    
     // If populate didn't work, manually fetch the articles
     if (volume.articles && volume.articles.length > 0 && typeof volume.articles[0] === 'string') {
-      console.log('📝 Articles are strings, manually fetching...')
       const articleIds = volume.articles as any[]
       const articles = await this.articleModel
         .find({ _id: { $in: articleIds } })
         .select('title abstract authors submissionDate status categories type keywords')
         .exec()
       
-      console.log('📝 Manually fetched articles:', articles)
       return articles
     }
     
@@ -215,8 +200,6 @@ export class VolumesService {
   }
 
   async assignArticles(volumeId: string, articleIds: string[]): Promise<Volume> {
-    console.log('📝 Assigning articles:', { volumeId, articleIds })
-    
     // Validate the volume ObjectId
     if (!volumeId || volumeId === 'undefined' || volumeId === 'null' || !Types.ObjectId.isValid(volumeId)) {
       throw new BadRequestException(`Invalid volume ID: ${volumeId}`)
@@ -229,43 +212,32 @@ export class VolumesService {
       }
     }
     
-    try {
-      const volume = await this.volumeModel.findById(volumeId)
-      if (!volume) {
-        throw new NotFoundException(`Volume with ID ${volumeId} not found`)
-      }
-
-      console.log('📝 Found volume:', volume.title)
-
-      // Add articles to volume
-      await this.volumeModel.findByIdAndUpdate(
-        volumeId,
-        { $addToSet: { articles: { $each: articleIds } } }
-      )
-
-      console.log('📝 Updated volume with articles')
-
-      // Update articles to reference this volume
-      const updateData: any = { volume: volumeId }
-      
-      // If volume is published, automatically publish the articles
-      if (volume.status === 'published') {
-        updateData.status = 'published'
-        updateData.publishDate = new Date()
-      }
-
-      const articleUpdateResult = await this.articleModel.updateMany(
-        { _id: { $in: articleIds } },
-        updateData
-      )
-
-      console.log('📝 Updated articles:', articleUpdateResult)
-
-      return this.findOne(volumeId)
-    } catch (error) {
-      console.error('❌ Error in assignArticles:', error)
-      throw error
+    const volume = await this.volumeModel.findById(volumeId)
+    if (!volume) {
+      throw new NotFoundException(`Volume with ID ${volumeId} not found`)
     }
+
+    // Add articles to volume
+    await this.volumeModel.findByIdAndUpdate(
+      volumeId,
+      { $addToSet: { articles: { $each: articleIds } } }
+    )
+
+    // Update articles to reference this volume
+    const updateData: any = { volume: volumeId }
+    
+    // If volume is published, automatically publish the articles
+    if (volume.status === 'published') {
+      updateData.status = 'published'
+      updateData.publishDate = new Date()
+    }
+
+    await this.articleModel.updateMany(
+      { _id: { $in: articleIds } },
+      updateData
+    )
+
+    return this.findOne(volumeId)
   }
 
   async removeArticle(volumeId: string, articleId: string): Promise<Volume> {

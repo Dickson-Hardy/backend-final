@@ -6,6 +6,7 @@ import { Article, ArticleSchema } from "./schemas/article.schema"
 import { Volume, VolumeSchema } from "../volumes/schemas/volume.schema"
 import { UploadModule } from "../upload/upload.module"
 import { EmailModule } from "../email/email.module"
+import { UsersModule } from "../users/users.module"
 import { RolesGuard } from "../auth/guards/roles.guard"
 
 @Module({
@@ -15,7 +16,8 @@ import { RolesGuard } from "../auth/guards/roles.guard"
       { name: Volume.name, schema: VolumeSchema }
     ]), 
     UploadModule, 
-    EmailModule
+    EmailModule,
+    UsersModule
   ],
   controllers: [ArticlesController],
   providers: [ArticlesService, RolesGuard],

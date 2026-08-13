@@ -20,10 +20,6 @@ export class VolumesController {
   @ApiOperation({ summary: "Create a new volume" })
   @ApiResponse({ status: 201, description: "Volume created successfully" })
   create(@Body() createVolumeDto: CreateVolumeDto, @Request() req) {
-    console.log('📝 Controller received volume data:', createVolumeDto)
-    console.log('📝 Controller data type:', typeof createVolumeDto)
-    console.log('📝 Controller data keys:', Object.keys(createVolumeDto))
-    console.log('📝 Controller data JSON:', JSON.stringify(createVolumeDto))
     return this.volumesService.create(createVolumeDto, req.user.role)
   }
 
@@ -131,13 +127,7 @@ export class VolumesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Assign articles to volume' })
   assignArticles(@Param('id') id: string, @Body() body: { articleIds: string[] }) {
-    console.log('📝 Controller assignArticles:', { id, body })
-    try {
-      return this.volumesService.assignArticles(id, body.articleIds);
-    } catch (error) {
-      console.error('❌ Controller error:', error)
-      throw error
-    }
+    return this.volumesService.assignArticles(id, body.articleIds)
   }
 
   @Delete(':id([0-9a-fA-F]{24})/articles/:articleId([0-9a-fA-F]{24})')
