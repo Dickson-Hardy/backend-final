@@ -21,12 +21,12 @@ export class DraftsController {
 
   @Post()
   create(@Request() req, @Body() createDraftDto: CreateDraftDto) {
-    return this.draftsService.create(req.user.userId, createDraftDto);
+    return this.draftsService.create(req.user.id, createDraftDto);
   }
 
   @Get()
   findByAuthor(@Request() req) {
-    return this.draftsService.findByAuthor(req.user.userId);
+    return this.draftsService.findByAuthor(req.user.id);
   }
 
   @Get(':id')
@@ -40,17 +40,17 @@ export class DraftsController {
     @Body() updateDraftDto: UpdateDraftDto,
     @Request() req,
   ) {
-    return this.draftsService.update(id, updateDraftDto, req.user.userId);
+    return this.draftsService.update(id, updateDraftDto, req.user.id);
   }
 
   @Delete(':id')
   async delete(@Param('id') id: string, @Request() req) {
-    await this.draftsService.delete(id, req.user.userId);
+    await this.draftsService.delete(id, req.user.id);
     return { message: 'Draft deleted successfully' };
   }
 
   @Post(':id/submit')
   submitAsArticle(@Param('id') id: string, @Request() req) {
-    return this.draftsService.submitAsArticle(id, req.user.userId);
+    return this.draftsService.submitAsArticle(id, req.user.id);
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards } from "@nestjs/common"
+import { Body, Controller, Post, UseGuards } from "@nestjs/common"
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger"
 import { EmailService } from "./email.service"
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard"
@@ -18,7 +18,7 @@ export class EmailController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Send newsletter to subscribers" })
   @ApiResponse({ status: 200, description: "Newsletter sent successfully" })
-  async sendNewsletter(sendNewsletterDto: SendNewsletterDto) {
+  async sendNewsletter(@Body() sendNewsletterDto: SendNewsletterDto) {
     const { recipients, subject, content } = sendNewsletterDto
     return this.emailService.sendNewsletterAlert(recipients, subject, content)
   }
@@ -29,7 +29,7 @@ export class EmailController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Send test email" })
   @ApiResponse({ status: 200, description: "Test email sent" })
-  async sendTestEmail(body: { to: string; type: "resend" | "smtp" }) {
+  async sendTestEmail(@Body() body: { to: string; type: "resend" | "smtp" }) {
     const template = {
       html: "<h1>Test Email</h1><p>This is a test email from AMHSJ backend.</p>",
       text: "Test Email - This is a test email from AMHSJ backend.",

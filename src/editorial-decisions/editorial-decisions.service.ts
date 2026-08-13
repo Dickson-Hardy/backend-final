@@ -10,12 +10,18 @@ import {
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { UpdateDecisionDto } from './dto/update-decision.dto';
 import { MakeDecisionDto } from './dto/make-decision.dto';
+import { Article, ArticleDocument, ArticleStatus } from '../articles/schemas/article.schema';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/schemas/notification.schema';
 
 @Injectable()
 export class EditorialDecisionsService {
   constructor(
     @InjectModel(EditorialDecision.name)
     private decisionModel: Model<EditorialDecisionDocument>,
+    @InjectModel(Article.name)
+    private articleModel: Model<ArticleDocument>,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(createDecisionDto: CreateDecisionDto) {
@@ -32,7 +38,7 @@ export class EditorialDecisionsService {
     return decision;
   }
 
-  async findAll(status?: DecisionStatus, priority?: string) {
+  async findAll(status?: DecisionStatus, priority?: string, articleId?: string) {
     const query: any = {};
 
     if (status) {
@@ -41,6 +47,9 @@ export class EditorialDecisionsService {
 
     if (priority) {
       query.priority = priority;
+    }
+    if (articleId) {
+      query.articleId = new Types.ObjectId(articleId);
     }
 
     return this.decisionModel
@@ -96,7 +105,38 @@ export class EditorialDecisionsService {
       throw new NotFoundException('Editorial decision not found');
     }
 
-    // In production, send notification to author here
+    const article = await this.articleModel.findById(decision.articleId);
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    switch (makeDecisionDto.decision) {
+      case DecisionType.ACCEPT:
+        article.status = ArticleStatus.ACCEPTED;
+        article.acceptanceDate = new Date();
+        break;
+      case DecisionType.MINOR_REVISION:
+      case DecisionType.MAJOR_REVISION:
+        article.status = ArticleStatus.REVISION_REQUESTED;
+        break;
+      case DecisionType.REJECT:
+        article.status = ArticleStatus.REJECTED;
+        break;
+    }
+    await article.save();
+
+    if (article.correspondingAuthor) {
+      await this.notificationsService.notifyDecisionMade(
+        article.correspondingAuthor.toString(),
+        article._id.toString(),
+        article.title,
+        article.status === ArticleStatus.ACCEPTED
+          ? 'accepted'
+          : article.status === ArticleStatus.REJECTED
+            ? 'rejected'
+            : 'revision_requested',
+      );
+    }
 
     return decision;
   }

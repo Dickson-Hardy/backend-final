@@ -139,9 +139,19 @@ export class VolumesService {
     await this.volumeModel.findByIdAndUpdate(id, { $inc: { downloadCount: 1 } })
   }
 
-  async getTitles(): Promise<string[]> {
-    const volumes = await this.volumeModel.find({}, 'title').exec()
-    return volumes.map(volume => volume.title)
+  async getTitles(): Promise<Array<{ _id: string; title: string; volume: number; year: number }>> {
+    const volumes = await this.volumeModel
+      .find({}, 'title volume year')
+      .sort({ year: -1, volume: -1 })
+      .lean()
+      .exec()
+
+    return volumes.map(volume => ({
+      _id: volume._id.toString(),
+      title: volume.title,
+      volume: volume.volume,
+      year: volume.year,
+    }))
   }
 
   async findByNumber(volumeNumber: number): Promise<Volume> {
@@ -241,7 +251,7 @@ export class VolumesService {
       // If volume is published, automatically publish the articles
       if (volume.status === 'published') {
         updateData.status = 'published'
-        updateData.publishedDate = new Date()
+        updateData.publishDate = new Date()
       }
 
       const articleUpdateResult = await this.articleModel.updateMany(

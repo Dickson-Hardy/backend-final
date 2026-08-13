@@ -28,17 +28,17 @@ export class NotificationsController {
   @Get()
   findAll(@Request() req, @Query('unreadOnly') unreadOnly?: string) {
     const isUnreadOnly = unreadOnly === 'true';
-    return this.notificationsService.findAllForUser(req.user.userId, isUnreadOnly);
+    return this.notificationsService.findAllForUser(req.user.id, isUnreadOnly);
   }
 
   @Get('unread-count')
   getUnreadCount(@Request() req) {
-    return this.notificationsService.getUnreadCount(req.user.userId);
+    return this.notificationsService.getUnreadCount(req.user.id);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req) {
-    return this.notificationsService.findOne(id, req.user.userId);
+    return this.notificationsService.findOne(id, req.user.id);
   }
 
   @Patch(':id')
@@ -47,26 +47,26 @@ export class NotificationsController {
     @Body() updateNotificationDto: UpdateNotificationDto,
     @Request() req,
   ) {
-    return this.notificationsService.update(id, updateNotificationDto, req.user.userId);
+    return this.notificationsService.update(id, updateNotificationDto, req.user.id);
   }
 
   @Patch(':id/read')
   markAsRead(@Param('id') id: string, @Request() req) {
-    return this.notificationsService.markAsRead(id, req.user.userId);
+    return this.notificationsService.markAsRead(id, req.user.id);
   }
 
   @Post('mark-all-read')
   markAllAsRead(@Request() req) {
-    return this.notificationsService.markAllAsRead(req.user.userId);
+    return this.notificationsService.markAllAsRead(req.user.id);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
-    return this.notificationsService.delete(id, req.user.userId);
+    return this.notificationsService.delete(id, req.user.id);
   }
 
   @Delete()
   removeAll(@Request() req) {
-    return this.notificationsService.deleteAll(req.user.userId);
+    return this.notificationsService.deleteAll(req.user.id);
   }
 }

@@ -48,7 +48,7 @@ export class QualityReviewsController {
 
   @Patch(':id/start')
   startReview(@Param('id') id: string, @Request() req) {
-    return this.qualityReviewsService.startReview(id, req.user.userId);
+    return this.qualityReviewsService.startReview(id, req.user.id);
   }
 
   @Patch(':id/approve')

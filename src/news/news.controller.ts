@@ -31,7 +31,7 @@ export class NewsController {
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF, UserRole.EDITORIAL_BOARD)
   @UseInterceptors(FileInterceptor('image'))
   async create(
-    createNewsDto: CreateNewsDto,
+    @Body() createNewsDto: CreateNewsDto,
     @Request() req,
     @UploadedFile() image?: Express.Multer.File
   ) {
@@ -42,23 +42,23 @@ export class NewsController {
   async findAll(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
-    @Query('category') category?: string,
+    @Query('type') type?: string,
     @Query('search') search?: string
   ) {
     const pageNum = parseInt(page, 10)
     const limitNum = parseInt(limit, 10)
-    return this.newsService.findAll(pageNum, limitNum, { category, search })
+    return this.newsService.findAll(pageNum, limitNum, { type, search })
   }
 
   @Get('published')
   async findPublished(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
-    @Query('category') category?: string
+    @Query('type') type?: string
   ) {
     const pageNum = parseInt(page, 10)
     const limitNum = parseInt(limit, 10)
-    return this.newsService.findPublished(pageNum, limitNum, { category })
+    return this.newsService.findPublished(pageNum, limitNum, { type })
   }
 
   @Get('recent')
@@ -68,8 +68,8 @@ export class NewsController {
   }
 
   @Get('featured')
-  async findFeatured() {
-    return this.newsService.findFeatured()
+  async findFeatured(@Query('limit') limit: string = '3') {
+    return this.newsService.findFeatured(parseInt(limit, 10))
   }
 
   @Get(':id')
@@ -83,7 +83,7 @@ export class NewsController {
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id') id: string,
-    updateNewsDto: UpdateNewsDto,
+    @Body() updateNewsDto: UpdateNewsDto,
     @Request() req,
     @UploadedFile() image?: Express.Multer.File
   ) {

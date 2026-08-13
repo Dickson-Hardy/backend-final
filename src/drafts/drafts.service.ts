@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Draft, DraftDocument } from './schemas/draft.schema';
@@ -80,27 +80,9 @@ export class DraftsService {
       throw new ForbiddenException('You can only submit your own drafts');
     }
 
-    if (draft.completionPercentage < 90) {
-      throw new ForbiddenException('Draft must be at least 90% complete to submit');
-    }
-
-    // Create article submission from draft
-    const articleData = {
-      title: draft.formData.title || draft.title,
-      abstract: draft.formData.abstract,
-      keywords: draft.keywords,
-      manuscriptType: draft.manuscriptType,
-      ...draft.formData,
-    };
-
-    // TODO: Update this once we know the correct parameters for articlesService.create
-    // For now, return a mock article
-    const article = { id: 'mock-article-id', ...articleData };
-
-    // Mark draft as submitted
-    await this.draftModel.findByIdAndUpdate(id, { status: 'submitted' });
-
-    return article;
+    throw new BadRequestException(
+      'Open this draft in the submission form and attach the manuscript before submitting.',
+    );
   }
 
   private calculateCompletionPercentage(draft: Draft): number {

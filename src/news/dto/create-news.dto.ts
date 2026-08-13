@@ -1,13 +1,5 @@
-import { IsString, IsArray, IsOptional, IsEnum, IsNotEmpty, MaxLength, IsBoolean } from 'class-validator'
-
-export enum NewsCategory {
-  ANNOUNCEMENT = 'announcement',
-  RESEARCH_UPDATE = 'research_update',
-  CONFERENCE = 'conference',
-  AWARD = 'award',
-  EDITORIAL = 'editorial',
-  GENERAL = 'general',
-}
+import { IsString, IsArray, IsOptional, IsEnum, IsNotEmpty, MaxLength, IsBoolean, IsDateString } from 'class-validator'
+import { NewsPriority, NewsStatus, NewsType } from '../schemas/news.schema'
 
 export class CreateNewsDto {
   @IsString()
@@ -24,17 +16,29 @@ export class CreateNewsDto {
   @MaxLength(500)
   excerpt?: string
 
-  @IsEnum(NewsCategory)
-  category: NewsCategory
+  @IsEnum(NewsType)
+  type: NewsType
+
+  @IsEnum(NewsPriority)
+  @IsOptional()
+  priority?: NewsPriority = NewsPriority.MEDIUM
+
+  @IsEnum(NewsStatus)
+  @IsOptional()
+  status?: NewsStatus = NewsStatus.DRAFT
 
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   tags?: string[]
 
-  @IsBoolean()
+  @IsDateString()
   @IsOptional()
-  published?: boolean = true
+  publishDate?: string
+
+  @IsDateString()
+  @IsOptional()
+  expiryDate?: string
 
   @IsBoolean()
   @IsOptional()

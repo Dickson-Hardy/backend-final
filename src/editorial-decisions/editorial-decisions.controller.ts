@@ -43,8 +43,9 @@ export class EditorialDecisionsController {
   findAll(
     @Query('status') status?: DecisionStatus,
     @Query('priority') priority?: string,
+    @Query('articleId') articleId?: string,
   ) {
-    return this.editorialDecisionsService.findAll(status, priority);
+    return this.editorialDecisionsService.findAll(status, priority, articleId);
   }
 
   @Get('statistics')
@@ -73,7 +74,7 @@ export class EditorialDecisionsController {
     return this.editorialDecisionsService.makeDecision(
       id,
       makeDecisionDto,
-      req.user.userId,
+      req.user.id,
       req.user.name || req.user.email,
     );
   }

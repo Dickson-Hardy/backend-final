@@ -45,8 +45,6 @@ export class ArticlesController {
     }
     
     // Debug logging
-    console.log('📝 Received body:', body)
-    console.log('📝 Body keys:', Object.keys(body))
     
     // Parse JSON fields from multipart form data
     const createArticleDto: CreateArticleDto = {
@@ -58,11 +56,13 @@ export class ArticlesController {
       authors: body.authors ? JSON.parse(body.authors) : [],
       correspondingAuthorEmail: body.correspondingAuthorEmail,
       volume: body.volume,
+      categories: body.categories ? JSON.parse(body.categories) : [],
       funding: body.funding,
       acknowledgments: body.acknowledgments,
+      conflictOfInterest: body.conflictOfInterest,
+      references: body.references ? JSON.parse(body.references) : [],
     }
     
-    console.log('📝 Parsed DTO:', createArticleDto)
     
     return this.articlesService.create(createArticleDto, req.user.id, files, req.user.role)
   }
@@ -85,12 +85,20 @@ export class ArticlesController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('category') category?: string,
+    @Query('volume') volume?: string,
+    @Query('sort') sort?: string,
     @Query('featured') featured?: string,
     @Query('search') search?: string
   ) {
     const pageNum = parseInt(page, 10)
     const limitNum = parseInt(limit, 10)
-    return this.articlesService.findPublished(pageNum, limitNum, { category, featured: featured === 'true', search })
+    return this.articlesService.findPublished(pageNum, limitNum, {
+      category,
+      volume,
+      sort,
+      featured: featured === 'true',
+      search,
+    })
   }
 
   @Get('featured')
@@ -161,7 +169,6 @@ export class ArticlesController {
     @Query('category') category?: string,
     @Query('status') status?: string
   ) {
-    console.log('📝 Available for volume request:', { volumeId, search, category, status })
     return this.articlesService.findAvailableForVolume(volumeId, { search, category, status })
   }
 
@@ -177,7 +184,7 @@ export class ArticlesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  async update(@Param('id') id: string, updateArticleDto: UpdateArticleDto, @Request() req) {
+  async update(@Param('id') id: string, @Body() updateArticleDto: UpdateArticleDto, @Request() req) {
     return this.articlesService.update(id, updateArticleDto, req.user.id)
   }
 
@@ -197,7 +204,7 @@ export class ArticlesController {
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF, UserRole.EDITORIAL_BOARD)
   async updateStatus(
     @Param('id') id: string,
-    statusDto: { status: string; reviewerComments?: string },
+    @Body() statusDto: { status: string; reviewerComments?: string },
     @Request() req
   ) {
     return this.articlesService.updateStatus(id, statusDto.status, req.user.id, statusDto.reviewerComments)
@@ -206,7 +213,7 @@ export class ArticlesController {
   @Post(':id/assign-reviewer')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF, UserRole.EDITORIAL_BOARD)
-  async assignReviewer(@Param('id') id: string, assignDto: { reviewerId: string }, @Request() req) {
+  async assignReviewer(@Param('id') id: string, @Body() assignDto: { reviewerId: string }, @Request() req) {
     return this.articlesService.assignReviewer(id, assignDto.reviewerId, req.user.id)
   }
 
@@ -215,7 +222,7 @@ export class ArticlesController {
   @Roles(UserRole.REVIEWER)
   async submitReview(
     @Param('id') id: string,
-    reviewDto: { rating: number; comments: string; recommendation: string },
+    @Body() reviewDto: { rating: number; comments: string; recommendation: string },
     @Request() req
   ) {
     return this.articlesService.submitReview(id, req.user.id, reviewDto)

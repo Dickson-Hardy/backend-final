@@ -67,7 +67,7 @@ export class ReviewWorkflowService {
       assignedByName: `${assigner.firstName} ${assigner.lastName}`,
       status: ReviewStatus.PENDING,
       dueDate: new Date(assignDto.dueDate),
-      isAnonymous: assignDto.isAnonymous || true,
+      isAnonymous: assignDto.isAnonymous ?? true,
     });
 
     const savedReview = await review.save();
@@ -104,6 +104,20 @@ export class ReviewWorkflowService {
       .find({ articleId: new Types.ObjectId(articleId) })
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  async getArticleWorkflow(articleId: string) {
+    const article = await this.articleModel
+      .findById(articleId)
+      .populate('assignedReviewers', 'firstName lastName email status')
+      .lean()
+      .exec();
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    const reviews = await this.getReviewsForArticle(articleId);
+    return { article, reviews };
   }
 
   async getReviewsForReviewer(reviewerId: string, status?: ReviewStatus): Promise<Review[]> {
@@ -145,7 +159,7 @@ export class ReviewWorkflowService {
       type: NotificationType.REVIEW_SUBMITTED,
       title: 'Review Accepted',
       message: `${review.reviewerName} has accepted the review for "${review.articleTitle}"`,
-      actionUrl: `/dashboard/editorial/reviews/${reviewId}`,
+      actionUrl: `/dashboard/editorial`,
     });
 
     return updatedReview;
@@ -178,7 +192,7 @@ export class ReviewWorkflowService {
       type: NotificationType.REVIEW_SUBMITTED,
       title: 'Review Declined',
       message: `${review.reviewerName} has declined the review for "${review.articleTitle}"`,
-      actionUrl: `/dashboard/editorial/reviews/${reviewId}`,
+      actionUrl: `/dashboard/editorial`,
     });
 
     return updatedReview;
@@ -222,7 +236,7 @@ export class ReviewWorkflowService {
       type: NotificationType.REVIEW_SUBMITTED,
       title: 'Review Completed',
       message: `${review.reviewerName} has completed the review for "${review.articleTitle}"`,
-      actionUrl: `/dashboard/editorial/reviews/${reviewId}`,
+      actionUrl: `/dashboard/editorial`,
     });
 
     return updatedReview;
@@ -231,6 +245,22 @@ export class ReviewWorkflowService {
   private async createEditorialDecision(articleId: string): Promise<EditorialDecision> {
     const article = await this.articleModel.findById(articleId);
     const reviews = await this.getReviewsForArticle(articleId);
+
+    const existingDecision = await this.editorialDecisionModel.findOne({
+      articleId: new Types.ObjectId(articleId),
+      status: { $ne: DecisionStatus.DECIDED },
+    });
+    if (existingDecision) {
+      existingDecision.recommendationsCount = reviews.filter(
+        review => review.status === ReviewStatus.COMPLETED,
+      ).length;
+      existingDecision.recommendations = reviews
+        .filter(review => review.status === ReviewStatus.COMPLETED && review.recommendation)
+        .map(review => review.recommendation);
+      return existingDecision.save();
+    }
+
+    const completedReviews = reviews.filter(review => review.status === ReviewStatus.COMPLETED);
     
     const decision = new this.editorialDecisionModel({
       articleId: new Types.ObjectId(articleId),
@@ -238,8 +268,8 @@ export class ReviewWorkflowService {
       authorName: article.authors[0] ? `${article.authors[0].firstName} ${article.authors[0].lastName}` : 'Unknown',
       submittedDate: new Date(),
       status: DecisionStatus.PENDING,
-      recommendationsCount: reviews.length,
-      recommendations: reviews.map(r => r.recommendation),
+      recommendationsCount: completedReviews.length,
+      recommendations: completedReviews.map(r => r.recommendation),
       priority: 'normal',
     });
 
@@ -296,17 +326,47 @@ export class ReviewWorkflowService {
       type: NotificationType.DECISION_MADE,
       title: 'Editorial Decision',
       message: `A decision has been made on your submission "${article.title}"`,
-      actionUrl: `/dashboard/submissions/${article._id}`,
+      actionUrl: `/dashboard/submissions`,
     });
 
     return updatedDecision;
   }
 
-  async getEditorialQueue(): Promise<EditorialDecision[]> {
-    return this.editorialDecisionModel
-      .find({ status: { $ne: DecisionStatus.DECIDED } })
-      .sort({ priority: -1, submittedDate: 1 })
+  async getEditorialQueue(): Promise<any[]> {
+    const articles = await this.articleModel
+      .find({
+        status: { $in: [ArticleStatus.SUBMITTED, ArticleStatus.UNDER_REVIEW, ArticleStatus.REVISION_REQUESTED] },
+      })
+      .populate('assignedReviewers', 'firstName lastName email status')
+      .sort({ submissionDate: 1, createdAt: 1 })
+      .lean()
       .exec();
+
+    const articleIds = articles.map((article: any) => article._id);
+    const reviews = await this.reviewModel
+      .find({ articleId: { $in: articleIds } })
+      .lean()
+      .exec();
+
+    return articles.map((article: any) => {
+      const articleReviews = reviews.filter(
+        (review: any) => review.articleId.toString() === article._id.toString(),
+      );
+      return {
+        ...article,
+        articleId: article._id,
+        articleTitle: article.title,
+        authorName: article.authors?.length
+          ? article.authors.map((author: any) => `${author.firstName} ${author.lastName}`).join(', ')
+          : 'Unknown author',
+        submittedDate: article.submissionDate || article.createdAt,
+        recommendationsCount: articleReviews.filter(
+          (review: any) => review.status === ReviewStatus.COMPLETED,
+        ).length,
+        reviewCount: articleReviews.length,
+        priority: 'normal',
+      };
+    });
   }
 
   async getReviewerStats(reviewerId: string) {

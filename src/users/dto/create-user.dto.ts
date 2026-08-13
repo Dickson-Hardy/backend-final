@@ -1,5 +1,5 @@
 import { IsString, IsEmail, IsOptional, IsEnum, MinLength, IsArray } from 'class-validator'
-import { UserRole } from '../schemas/user.schema'
+import { UserRole, UserStatus } from '../schemas/user.schema'
 
 export class CreateUserDto {
   @IsString()
@@ -19,6 +19,14 @@ export class CreateUserDto {
   @IsOptional()
   role?: UserRole = UserRole.AUTHOR
 
+  @IsEnum(UserStatus)
+  @IsOptional()
+  status?: UserStatus = UserStatus.ACTIVE
+
+  @IsString()
+  @IsOptional()
+  department?: string
+
   @IsString()
   @IsOptional()
   affiliation?: string
@@ -31,6 +39,11 @@ export class CreateUserDto {
   @IsString({ each: true })
   @IsOptional()
   expertise?: string[]
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  specializations?: string[]
 
   @IsString()
   @IsOptional()

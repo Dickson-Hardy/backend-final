@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Review, ReviewDocument, ReviewStatus } from './schemas/review.schema';
 import { CreateReviewDto, SubmitReviewDto, UpdateReviewStatusDto } from './dto/create-review.dto';
+import { InviteReviewerDto } from './dto/invite-reviewer.dto';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
@@ -165,7 +166,7 @@ export class ReviewsService {
       type: NotificationType.REVIEW_SUBMITTED,
       title: 'Review Completed',
       message: `Review completed for "${article.title}" by ${reviewer.firstName} ${reviewer.lastName}`,
-      actionUrl: `/dashboard/editorial/articles/${article._id}`,
+      actionUrl: `/dashboard/editorial`,
       priority: 'high',
     });
 
@@ -215,7 +216,7 @@ export class ReviewsService {
       type: NotificationType.GENERAL,
       title: 'Reviewer Accepted Assignment',
       message: `${reviewer.firstName} ${reviewer.lastName} accepted review for "${article.title}"`,
-      actionUrl: `/dashboard/editorial/articles/${article._id}`,
+      actionUrl: `/dashboard/editorial`,
     });
 
     return savedReview;
@@ -253,7 +254,7 @@ export class ReviewsService {
       type: NotificationType.GENERAL,
       title: 'Reviewer Declined Assignment',
       message: `${reviewer.firstName} ${reviewer.lastName} declined review for "${article.title}". Reason: ${reason}`,
-      actionUrl: `/dashboard/editorial/articles/${article._id}`,
+      actionUrl: `/dashboard/editorial`,
       priority: 'high',
     });
 
@@ -382,6 +383,125 @@ export class ReviewsService {
     ]);
 
     return reviewers;
+  }
+
+  async inviteReviewer(inviteDto: InviteReviewerDto, assignedById: string) {
+    const reviewer = await this.userModel.findOne({ email: inviteDto.email.toLowerCase() });
+    if (!reviewer) {
+      throw new NotFoundException('Create a reviewer account before assigning this email');
+    }
+    if (reviewer.role !== 'reviewer') {
+      throw new BadRequestException('The selected account does not have the reviewer role');
+    }
+
+    const article = await this.articleModel.findById(inviteDto.articleId);
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 21);
+    return this.create(
+      {
+        articleId: article._id.toString(),
+        articleTitle: article.title,
+        reviewerId: reviewer._id.toString(),
+        reviewerName: `${reviewer.firstName} ${reviewer.lastName}`,
+        dueDate: dueDate.toISOString(),
+        isAnonymous: true,
+        customInstructions: inviteDto.message,
+      },
+      assignedById,
+      'Editorial team',
+    );
+  }
+
+  async getReviewerPool() {
+    const reviewers = await this.userModel
+      .find({ role: 'reviewer' })
+      .select('firstName lastName email affiliation specializations status lastLogin createdAt')
+      .lean()
+      .exec();
+
+    const workloads = await this.reviewModel.aggregate([
+      { $match: { status: { $in: [ReviewStatus.PENDING, ReviewStatus.IN_PROGRESS, ReviewStatus.OVERDUE] } } },
+      { $group: { _id: '$reviewerId', currentLoad: { $sum: 1 } } },
+    ]);
+    const workloadByReviewer = new Map(
+      workloads.map((item: any) => [item._id.toString(), item.currentLoad]),
+    );
+
+    const performanceRows = await this.reviewModel.aggregate([
+      {
+        $group: {
+          _id: '$reviewerId',
+          totalReviews: { $sum: 1 },
+          completedReviews: { $sum: { $cond: [{ $eq: ['$status', ReviewStatus.COMPLETED] }, 1, 0] } },
+          averageRating: { $avg: '$ratings.overall' },
+          onTimeReviews: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', ReviewStatus.COMPLETED] }, { $lte: ['$submittedDate', '$dueDate'] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          averageCompletionMs: {
+            $avg: {
+              $cond: [
+                { $and: ['$submittedDate', '$acceptedDate'] },
+                { $subtract: ['$submittedDate', '$acceptedDate'] },
+                null,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    const performanceByReviewer = new Map(
+      performanceRows.map((item: any) => [item._id.toString(), item]),
+    );
+
+    return reviewers.map((reviewer: any) => {
+      const performance: any = performanceByReviewer.get(reviewer._id.toString()) || {};
+      const completedReviews = performance.completedReviews || 0;
+      return {
+        ...reviewer,
+        _id: reviewer._id,
+        name: `${reviewer.firstName} ${reviewer.lastName}`,
+        affiliation: reviewer.affiliation || '',
+        expertise: reviewer.specializations || [],
+        currentLoad: workloadByReviewer.get(reviewer._id.toString()) || 0,
+        maxLoad: 5,
+        joinedDate: reviewer.createdAt,
+        lastActive: reviewer.lastLogin,
+        performance: {
+          totalReviews: performance.totalReviews || 0,
+          completedReviews,
+          avgRating: Number((performance.averageRating || 0).toFixed(1)),
+          avgCompletionTime: performance.averageCompletionMs
+            ? Math.max(0, Math.round(performance.averageCompletionMs / (1000 * 60 * 60 * 24)))
+            : 0,
+          onTimeRate: completedReviews
+            ? Math.round(((performance.onTimeReviews || 0) / completedReviews) * 100)
+            : 0,
+        },
+      };
+    });
+  }
+
+  async updateReviewerStatus(reviewerId: string, status: string) {
+    const reviewer = await this.userModel.findOneAndUpdate(
+      { _id: reviewerId, role: 'reviewer' },
+      { status: status === 'on_leave' ? 'inactive' : status },
+      { new: true },
+    ).select('-password');
+
+    if (!reviewer) {
+      throw new NotFoundException('Reviewer not found');
+    }
+    return reviewer;
   }
 
   async sendReminder(reviewId: string) {

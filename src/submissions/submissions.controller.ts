@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -35,10 +36,19 @@ export class SubmissionsController {
     ])
   )
   async createSubmission(
-    @Body() createSubmissionDto: CreateSubmissionDto,
+    @Body() body: any,
     @UploadedFiles() files: { manuscript?: Express.Multer.File[]; supplementary?: Express.Multer.File[] },
     @Request() req: any
   ) {
+    const createSubmissionDto: CreateSubmissionDto = {
+      ...body,
+      authors: this.parseJsonField(body.authors, 'authors'),
+      keywords: this.parseJsonField(body.keywords, 'keywords'),
+      references: this.parseJsonField(body.references, 'references', []),
+      categories: this.parseJsonField(body.categories, 'categories', []),
+      recommendedReviewers: this.parseJsonField(body.recommendedReviewers, 'recommendedReviewers', []),
+      ethicsApproval: body.ethicsApproval === true || body.ethicsApproval === 'true',
+    };
     return this.submissionsService.createSubmission(
       createSubmissionDto,
       req.user.id,
@@ -121,15 +131,23 @@ export class SubmissionsController {
   @Roles(UserRole.ASSOCIATE_EDITOR, UserRole.EDITORIAL_BOARD, UserRole.EDITOR_IN_CHIEF, UserRole.ADMIN)
   @UseGuards(RolesGuard)
   async getEditorialQueue() {
-    // Implementation for editorial queue
-    return { message: 'Editorial queue endpoint' };
+    return this.submissionsService.getEditorialQueue();
   }
 
   @Get('editorial/stats')
   @Roles(UserRole.ASSOCIATE_EDITOR, UserRole.EDITORIAL_BOARD, UserRole.EDITOR_IN_CHIEF, UserRole.ADMIN)
   @UseGuards(RolesGuard)
   async getEditorialStats() {
-    // Implementation for editorial statistics
-    return { message: 'Editorial stats endpoint' };
+    return this.submissionsService.getEditorialStats();
+  }
+
+  private parseJsonField(value: any, field: string, fallback?: any) {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      throw new BadRequestException(`${field} must be valid JSON`);
+    }
   }
 }

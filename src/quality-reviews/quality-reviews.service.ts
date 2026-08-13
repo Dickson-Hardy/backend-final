@@ -77,7 +77,7 @@ export class QualityReviewsService {
       type: NotificationType.SUBMISSION_RECEIVED,
       title: 'Article Approved',
       message: `Your article "${review.title}" has passed quality review`,
-      actionUrl: `/dashboard/submissions/${review.articleId}`,
+      actionUrl: `/dashboard/submissions`,
     });
 
     return this.qualityReviewModel
@@ -101,7 +101,7 @@ export class QualityReviewsService {
       type: NotificationType.REVISION_REQUESTED,
       title: 'Article Rejected',
       message: `Your article "${review.title}" did not pass quality review`,
-      actionUrl: `/dashboard/submissions/${review.articleId}`,
+      actionUrl: `/dashboard/submissions`,
     });
 
     return this.qualityReviewModel

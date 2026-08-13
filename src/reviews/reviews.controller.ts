@@ -29,14 +29,14 @@ export class ReviewsController {
   create(@Body() createReviewDto: CreateReviewDto, @Request() req) {
     return this.reviewsService.create(
       createReviewDto,
-      req.user.userId,
+      req.user.id,
       req.user.name || `${req.user.firstName} ${req.user.lastName}`,
     );
   }
 
   @Get('my-reviews')
   findMyReviews(@Request() req, @Query('status') status?: ReviewStatus) {
-    return this.reviewsService.findAllForReviewer(req.user.userId, status);
+    return this.reviewsService.findAllForReviewer(req.user.id, status);
   }
 
   @Get('article/:articleId')
@@ -46,7 +46,7 @@ export class ReviewsController {
 
   @Get('statistics')
   getMyStatistics(@Request() req) {
-    return this.reviewsService.getReviewerStatistics(req.user.userId);
+    return this.reviewsService.getReviewerStatistics(req.user.id);
   }
 
   @Get(':id')
@@ -60,12 +60,12 @@ export class ReviewsController {
     @Body() submitReviewDto: SubmitReviewDto,
     @Request() req,
   ) {
-    return this.reviewsService.submitReview(id, submitReviewDto, req.user.userId);
+    return this.reviewsService.submitReview(id, submitReviewDto, req.user.id);
   }
 
   @Post(':id/accept')
   acceptReview(@Param('id') id: string, @Request() req) {
-    return this.reviewsService.acceptReview(id, req.user.userId);
+    return this.reviewsService.acceptReview(id, req.user.id);
   }
 
   @Post(':id/decline')
@@ -74,7 +74,7 @@ export class ReviewsController {
     @Body('reason') reason: string,
     @Request() req,
   ) {
-    return this.reviewsService.declineReview(id, req.user.userId, reason);
+    return this.reviewsService.declineReview(id, req.user.id, reason);
   }
 
   @Patch(':id/status')
@@ -100,16 +100,18 @@ export class ReviewsController {
     return this.reviewsService.getAllReviewers();
   }
 
+  @Get('editorial/reviewer-pool')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.EDITOR_IN_CHIEF, UserRole.ASSOCIATE_EDITOR, UserRole.EDITORIAL_BOARD, UserRole.ADMIN)
+  getReviewerPool() {
+    return this.reviewsService.getReviewerPool();
+  }
+
   @Post('editorial/reviewers/invite')
   @UseGuards(RolesGuard)
   @Roles(UserRole.EDITOR_IN_CHIEF, UserRole.ASSOCIATE_EDITOR, UserRole.EDITORIAL_BOARD, UserRole.ADMIN)
   inviteReviewer(@Body() inviteDto: InviteReviewerDto, @Request() req) {
-    // In production, this would send an invitation email
-    return {
-      success: true,
-      message: 'Invitation sent successfully',
-      ...inviteDto,
-    };
+    return this.reviewsService.inviteReviewer(inviteDto, req.user.id);
   }
 
   @Post('editorial/reviewers/:id/remind')
@@ -126,12 +128,6 @@ export class ReviewsController {
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateReviewerStatusDto,
   ) {
-    // In production, this would update user status
-    return {
-      success: true,
-      message: 'Reviewer status updated',
-      id,
-      ...updateStatusDto,
-    };
+    return this.reviewsService.updateReviewerStatus(id, updateStatusDto.status);
   }
 }

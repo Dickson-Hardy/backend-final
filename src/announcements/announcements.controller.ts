@@ -24,7 +24,7 @@ export class AnnouncementsController {
   create(@Body() createAnnouncementDto: CreateAnnouncementDto, @Request() req) {
     return this.announcementsService.create(
       createAnnouncementDto,
-      req.user.userId,
+      req.user.id,
       req.user.name || `${req.user.firstName} ${req.user.lastName}`,
     );
   }

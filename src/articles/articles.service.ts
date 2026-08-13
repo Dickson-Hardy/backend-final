@@ -31,26 +31,45 @@ export class ArticlesService {
     let supplementaryFiles = []
     if (files.supplementary?.length > 0) {
       supplementaryFiles = await Promise.all(
-        files.supplementary.map(file => this.uploadService.uploadManuscript(file))
+        files.supplementary.map(file => this.uploadService.uploadSupplementary(file))
       )
     }
 
     // Determine article status based on user role
     let articleStatus = ArticleStatus.SUBMITTED
-    let publishedDate: Date | undefined = undefined
+    let publishDate: Date | undefined = undefined
     let featured = false
     
     // If created by admin, automatically publish and feature
     if (userRole === 'admin') {
       articleStatus = ArticleStatus.PUBLISHED
-      publishedDate = new Date()
-      featured = true
+      publishDate = new Date()
     }
 
     // Convert volume string to ObjectId if provided
     const volumeId = createArticleDto.volume 
       ? new Types.ObjectId(createArticleDto.volume) 
       : undefined
+
+    let articleNumber: string | undefined
+    if (userRole === 'admin') {
+      if (!volumeId) {
+        throw new BadRequestException('A volume is required for an admin publication upload')
+      }
+      const volume = await this.volumeModel.findById(volumeId)
+      if (!volume) {
+        throw new NotFoundException('Selected volume not found')
+      }
+      const numberedArticles = await this.articleModel
+        .find({ volume: volumeId, articleNumber: { $exists: true, $ne: '' } })
+        .select('articleNumber')
+        .lean()
+      const nextNumber = numberedArticles.reduce(
+        (highest, item: any) => Math.max(highest, Number.parseInt(item.articleNumber, 10) || 0),
+        0,
+      ) + 1
+      articleNumber = String(nextNumber).padStart(3, '0')
+    }
 
     const article = new this.articleModel({
       ...createArticleDto,
@@ -60,15 +79,31 @@ export class ArticlesService {
       manuscriptFile: manuscriptUpload,
       supplementaryFiles,
       status: articleStatus,
+      articleNumber,
       submissionDate: new Date(),
       featured,
-      ...(publishedDate && { publishedDate }),
+      ...(publishDate && { publishDate }),
     })
 
     const savedArticle = await article.save()
+
+    if (volumeId) {
+      await this.volumeModel.findByIdAndUpdate(volumeId, {
+        $addToSet: { articles: savedArticle._id },
+      })
+    }
     
     // Send confirmation email to author
-    await this.emailService.sendSubmissionConfirmation(authorId, savedArticle.authors[0].toString(), savedArticle.title, savedArticle._id.toString())
+    try {
+      await this.emailService.sendSubmissionConfirmation(
+        createArticleDto.correspondingAuthorEmail,
+        `${savedArticle.authors[0]?.firstName || ''} ${savedArticle.authors[0]?.lastName || ''}`.trim(),
+        savedArticle.title,
+        savedArticle._id.toString(),
+      )
+    } catch {
+      console.warn(`Article ${savedArticle._id} was saved, but its confirmation email could not be sent`)
+    }
     
     return savedArticle
   }
@@ -85,7 +120,7 @@ export class ArticlesService {
       query.status = filters.status
     }
     if (filters.category) {
-      query.category = filters.category
+      query.categories = filters.category
     }
     if (filters.search) {
       query.$or = [
@@ -98,7 +133,6 @@ export class ArticlesService {
     const [articles, total] = await Promise.all([
       this.articleModel
         .find(query)
-        .populate('authors', 'firstName lastName email')
         .populate('assignedReviewers', 'firstName lastName email')
         .sort({ submissionDate: -1 })
         .skip(skip)
@@ -118,16 +152,22 @@ export class ArticlesService {
   async findPublished(
     page: number = 1,
     limit: number = 10,
-    filters: { category?: string; featured?: boolean; search?: string } = {}
+    filters: {
+      category?: string
+      volume?: string
+      sort?: string
+      featured?: boolean
+      search?: string
+    } = {}
   ) {
-    console.log('🔍 findPublished called with:', { page, limit, filters })
-    console.log('🔍 ArticleStatus.PUBLISHED value:', ArticleStatus.PUBLISHED)
-    
     const skip = (page - 1) * limit
     const query: any = { status: ArticleStatus.PUBLISHED }
 
     if (filters.category) {
-      query.category = filters.category
+      query.categories = filters.category
+    }
+    if (filters.volume && Types.ObjectId.isValid(filters.volume)) {
+      query.volume = new Types.ObjectId(filters.volume)
     }
     if (filters.featured === true) {
       query.featured = true
@@ -137,29 +177,30 @@ export class ArticlesService {
         { title: { $regex: filters.search, $options: 'i' } },
         { abstract: { $regex: filters.search, $options: 'i' } },
         { keywords: { $in: [new RegExp(filters.search, 'i')] } },
+        { 'authors.firstName': { $regex: filters.search, $options: 'i' } },
+        { 'authors.lastName': { $regex: filters.search, $options: 'i' } },
       ]
     }
 
-    console.log('🔍 Final query:', JSON.stringify(query))
-
-    // First, let's check what articles exist with any status
-    const allArticles = await this.articleModel.find({}).select('title status').exec()
-    console.log('🔍 All articles in database:', allArticles.map(a => ({ title: a.title, status: a.status })))
+    const sortOptions: Record<string, Record<string, 1 | -1>> = {
+      'date-asc': { publishDate: 1 },
+      'date-desc': { publishDate: -1 },
+      'title-asc': { title: 1 },
+      'title-desc': { title: -1 },
+      'views-desc': { viewCount: -1, publishDate: -1 },
+    }
+    const sort = sortOptions[filters.sort || 'date-desc'] || sortOptions['date-desc']
 
     const [articles, total] = await Promise.all([
       this.articleModel
         .find(query)
-        .populate('authors', 'firstName lastName email')
         .populate('volume', 'volume year title')
-        .sort({ publishedDate: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .exec(),
       this.articleModel.countDocuments(query),
     ])
-
-    console.log('🔍 Found articles:', articles.length)
-    console.log('🔍 Total count:', total)
 
     return {
       articles,
@@ -173,7 +214,7 @@ export class ArticlesService {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED, featured: true })
       .populate('volume', 'volume year title')
-      .sort({ publishedDate: -1 })
+      .sort({ publishDate: -1 })
       .limit(6)
       .exec()
   }
@@ -182,14 +223,14 @@ export class ArticlesService {
     return this.articleModel
       .find({ status: ArticleStatus.PUBLISHED })
       .populate('volume', 'volume year title')
-      .sort({ publishedDate: -1 })
+      .sort({ publishDate: -1 })
       .limit(limit)
       .exec()
   }
 
   async findByAuthor(authorId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit
-    const query = { authors: authorId }
+    const query = { correspondingAuthor: new Types.ObjectId(authorId) }
 
     const [articles, total] = await Promise.all([
       this.articleModel
@@ -212,8 +253,6 @@ export class ArticlesService {
 
 
   async findByVolumeAndArticleNumber(volumeNumber: number, articleNumber: string): Promise<Article> {
-    console.log('📝 Finding article:', { volumeNumber, articleNumber })
-    
     // First, find the volume by its volume number
     const volume = await this.volumeModel.findOne({ volume: volumeNumber }).exec()
     
@@ -221,19 +260,14 @@ export class ArticlesService {
       throw new NotFoundException(`Volume ${volumeNumber} not found`)
     }
     
-    console.log('📝 Found volume:', { id: volume._id, volume: volume.volume, title: volume.title })
-    
     // Now find the article by article number AND volume ID
     const article = await this.articleModel
       .findOne({
         articleNumber: articleNumber,
         volume: volume._id
       })
-      .populate('authors', 'firstName lastName email affiliation')
       .populate('volume', 'volume title year')
       .exec()
-
-    console.log('📝 Found article:', article ? { id: article._id, title: article.title, status: article.status, volume: article.volume } : 'null')
 
     if (!article) {
       throw new NotFoundException(`Article ${articleNumber} not found in volume ${volumeNumber}`)
@@ -287,7 +321,6 @@ export class ArticlesService {
 
     const updatedArticle = await this.articleModel
       .findByIdAndUpdate(id, updateData, { new: true })
-      .populate('authors', 'firstName lastName email')
       .exec()
 
     return updatedArticle
@@ -321,7 +354,6 @@ export class ArticlesService {
         { articleNumber: articleNumber }, 
         { new: true }
       )
-      .populate('authors', 'firstName lastName email affiliation')
       .populate('volume', 'volume title year')
       .exec()
 
@@ -342,7 +374,7 @@ export class ArticlesService {
     const updateData: any = { status }
     
     if (status === ArticleStatus.PUBLISHED) {
-      updateData.publishedDate = new Date()
+      updateData.publishDate = new Date()
     }
     
     if (reviewerComments) {
@@ -351,7 +383,6 @@ export class ArticlesService {
 
     const updatedArticle = await this.articleModel
       .findByIdAndUpdate(id, updateData, { new: true })
-      .populate('authors', 'firstName lastName email')
       .exec()
 
     // Send status update email to author
@@ -375,7 +406,6 @@ export class ArticlesService {
         },
         { new: true }
       )
-      .populate('authors', 'firstName lastName email')
       .populate('assignedReviewers', 'firstName lastName email')
       .exec()
 
@@ -413,7 +443,6 @@ export class ArticlesService {
         { $push: { reviews: review } },
         { new: true }
       )
-      .populate('authors', 'firstName lastName email')
       .populate('assignedReviewers', 'firstName lastName email')
       .exec()
 
@@ -491,16 +520,13 @@ export class ArticlesService {
     volumeId?: string,
     filters: { search?: string; category?: string; status?: string } = {}
   ) {
-    // First, let's see all articles
     const allArticles = await this.articleModel.find({}).exec()
-    console.log('📝 Total articles in database:', allArticles.length)
     
     // If no articles exist, return empty result
     if (allArticles.length === 0) {
       return { articles: [], total: 0 }
     }
 
-    // For now, let's show ALL articles to debug
     const query: any = {}
     
     // Apply filters
@@ -509,7 +535,7 @@ export class ArticlesService {
     }
 
     if (filters.category && filters.category !== 'all') {
-      query.category = filters.category
+      query.categories = filters.category
     }
 
     if (filters.search) {
@@ -521,16 +547,11 @@ export class ArticlesService {
       ]
     }
 
-    console.log('📝 Available articles query:', JSON.stringify(query, null, 2))
-
     const articles = await this.articleModel
       .find(query)
-      .populate('authors', 'firstName lastName email')
       .sort({ submissionDate: -1 })
       .limit(50)
       .exec()
-
-    console.log('📝 Found available articles:', articles.length)
 
     return { articles, total: articles.length }
   }

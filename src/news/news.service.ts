@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
-import { News, NewsDocument } from './schemas/news.schema'
+import { News, NewsDocument, NewsStatus } from './schemas/news.schema'
 import { CreateNewsDto } from './dto/create-news.dto'
 import { UpdateNewsDto } from './dto/update-news.dto'
 import { UploadService } from '../upload/upload.service'
@@ -24,7 +24,11 @@ export class NewsService {
       ...createNewsDto,
       author: authorId,
       image: imageUpload,
-      publishedDate: new Date(),
+      publishDate: createNewsDto.publishDate
+        ? new Date(createNewsDto.publishDate)
+        : createNewsDto.status === NewsStatus.PUBLISHED
+          ? new Date()
+          : undefined,
     })
 
     return news.save()
@@ -33,13 +37,13 @@ export class NewsService {
   async findAll(
     page: number = 1,
     limit: number = 10,
-    filters: { category?: string; search?: string } = {}
+    filters: { type?: string; search?: string } = {}
   ) {
     const skip = (page - 1) * limit
     const query: any = {}
 
-    if (filters.category) {
-      query.category = filters.category
+    if (filters.type) {
+      query.type = filters.type
     }
     if (filters.search) {
       query.$or = [
@@ -53,7 +57,7 @@ export class NewsService {
       this.newsModel
         .find(query)
         .populate('author', 'firstName lastName email')
-        .sort({ publishedDate: -1 })
+        .sort({ publishDate: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
@@ -71,20 +75,20 @@ export class NewsService {
   async findPublished(
     page: number = 1,
     limit: number = 10,
-    filters: { category?: string } = {}
+    filters: { type?: string } = {}
   ) {
     const skip = (page - 1) * limit
-    const query: any = { published: true }
+    const query: any = { status: NewsStatus.PUBLISHED }
 
-    if (filters.category) {
-      query.category = filters.category
+    if (filters.type) {
+      query.type = filters.type
     }
 
     const [news, total] = await Promise.all([
       this.newsModel
         .find(query)
         .populate('author', 'firstName lastName email')
-        .sort({ publishedDate: -1 })
+        .sort({ publishDate: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
@@ -101,19 +105,19 @@ export class NewsService {
 
   async findRecent(limit: number = 5): Promise<News[]> {
     return this.newsModel
-      .find({ published: true })
+      .find({ status: NewsStatus.PUBLISHED })
       .populate('author', 'firstName lastName email')
-      .sort({ publishedDate: -1 })
+      .sort({ publishDate: -1, createdAt: -1 })
       .limit(limit)
       .exec()
   }
 
-  async findFeatured(): Promise<News[]> {
+  async findFeatured(limit: number = 3): Promise<News[]> {
     return this.newsModel
-      .find({ published: true, featured: true })
+      .find({ status: NewsStatus.PUBLISHED, featured: true })
       .populate('author', 'firstName lastName email')
-      .sort({ publishedDate: -1 })
-      .limit(3)
+      .sort({ publishDate: -1, createdAt: -1 })
+      .limit(limit)
       .exec()
   }
 
@@ -150,10 +154,17 @@ export class NewsService {
       imageUpload = await this.uploadService.uploadNews(image)
     }
 
+    const updateData: any = { ...updateNewsDto, image: imageUpload }
+    if (updateNewsDto.publishDate) {
+      updateData.publishDate = new Date(updateNewsDto.publishDate)
+    } else if (updateNewsDto.status === NewsStatus.PUBLISHED && !news.publishDate) {
+      updateData.publishDate = new Date()
+    }
+
     const updatedNews = await this.newsModel
       .findByIdAndUpdate(
         id,
-        { ...updateNewsDto, image: imageUpload },
+        updateData,
         { new: true }
       )
       .populate('author', 'firstName lastName email')
@@ -165,7 +176,7 @@ export class NewsService {
   async incrementViews(id: string): Promise<News> {
     return this.newsModel.findByIdAndUpdate(
       id,
-      { $inc: { views: 1 } },
+      { $inc: { viewCount: 1 } },
       { new: true }
     ).exec()
   }

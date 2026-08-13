@@ -108,4 +108,11 @@ export class ReviewWorkflowController {
   async getArticleReviews(@Param('id') id: string) {
     return this.reviewWorkflowService.getReviewsForArticle(id);
   }
+
+  @Get('articles/:id')
+  @Roles(UserRole.ASSOCIATE_EDITOR, UserRole.EDITORIAL_BOARD, UserRole.EDITOR_IN_CHIEF, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  async getArticleWorkflow(@Param('id') id: string) {
+    return this.reviewWorkflowService.getArticleWorkflow(id);
+  }
 }

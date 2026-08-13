@@ -7,6 +7,7 @@ import { Draft, DraftSchema } from '../drafts/schemas/draft.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { EmailModule } from '../email/email.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ]),
     EmailModule,
     NotificationsModule,
+    UploadModule,
   ],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],

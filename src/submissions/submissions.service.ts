@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { UpdateSubmissionDto } from './dto/update-submission.dto';
 import { SubmitRevisionDto } from './dto/submit-revision.dto';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class SubmissionsService {
@@ -19,6 +20,7 @@ export class SubmissionsService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private emailService: EmailService,
     private notificationsService: NotificationsService,
+    private uploadService: UploadService,
   ) {}
 
   async createSubmission(
@@ -61,12 +63,21 @@ export class SubmissionsService {
       }
     }
 
+    const manuscriptFile = await this.uploadService.uploadManuscript(files.manuscript[0]);
+    const supplementaryFiles = files.supplementary?.length
+      ? await Promise.all(
+          files.supplementary.map(file => this.uploadService.uploadSupplementary(file)),
+        )
+      : [];
+
     // Create article from submission
     const article = new this.articleModel({
       ...createSubmissionDto,
       correspondingAuthor: new Types.ObjectId(authorId),
       status: ArticleStatus.SUBMITTED,
       submissionDate: new Date(),
+      manuscriptFile,
+      supplementaryFiles,
       // Store recommended reviewers as metadata for editor review
       metadata: {
         recommendedReviewers: createSubmissionDto.recommendedReviewers || [],
@@ -109,7 +120,7 @@ export class SubmissionsService {
       type: NotificationType.SUBMISSION_RECEIVED,
       title: 'Submission Received',
       message: `Your article "${savedArticle.title}" has been successfully submitted and is now under editorial review`,
-      actionUrl: `/dashboard/submissions/${savedArticle._id}`,
+      actionUrl: `/dashboard/submissions`,
     });
 
     // Notify editorial team about new submission
@@ -117,7 +128,7 @@ export class SubmissionsService {
       type: NotificationType.SUBMISSION_RECEIVED,
       title: 'New Submission Received',
       message: `New article "${savedArticle.title}" submitted by ${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`,
-      actionUrl: `/dashboard/editorial/submissions/${savedArticle._id}`,
+      actionUrl: `/dashboard/editorial`,
     });
 
     // Remove draft if it exists
@@ -138,7 +149,7 @@ export class SubmissionsService {
     return this.articleModel
       .find(query)
       .sort({ submissionDate: -1 })
-      .populate('volume', 'title number year')
+      .populate('volume', 'title volume year')
       .exec();
   }
 
@@ -148,7 +159,7 @@ export class SubmissionsService {
         _id: new Types.ObjectId(submissionId),
         correspondingAuthor: new Types.ObjectId(authorId)
       })
-      .populate('volume', 'title number year')
+      .populate('volume', 'title volume year')
       .populate('reviewers', 'firstName lastName email')
       .exec();
 
@@ -213,6 +224,18 @@ export class SubmissionsService {
     }
 
     // Update submission with revision
+    const manuscriptFile = files?.manuscript?.[0]
+      ? await this.uploadService.uploadManuscript(files.manuscript[0])
+      : submission.manuscriptFile;
+    const supplementaryFiles = files?.supplementary?.length
+      ? [
+          ...(submission.supplementaryFiles || []),
+          ...(await Promise.all(
+            files.supplementary.map(file => this.uploadService.uploadSupplementary(file)),
+          )),
+        ]
+      : submission.supplementaryFiles;
+
     const updatedSubmission = await this.articleModel.findByIdAndUpdate(
       submissionId,
       {
@@ -220,7 +243,9 @@ export class SubmissionsService {
         status: ArticleStatus.UNDER_REVIEW,
         resubmissionDate: new Date(),
         revisionNotes: revisionDto.revisionNotes,
-        revisionCount: ((submission as any).metadata?.revisionCount || 0) + 1,
+        manuscriptFile,
+        supplementaryFiles,
+        revisionCount: (submission.revisionCount || 0) + 1,
         'metadata.lastRevisionDate': new Date(),
         'metadata.revisionHistory': [
           ...((submission as any).metadata?.revisionHistory || []),
@@ -254,7 +279,7 @@ export class SubmissionsService {
       type: NotificationType.REVISION_SUBMITTED,
       title: 'Revision Submitted',
       message: `Your revised manuscript "${submission.title}" has been resubmitted for review`,
-      actionUrl: `/dashboard/submissions/${submissionId}`,
+      actionUrl: `/dashboard/submissions`,
     });
 
     // Notify editorial team with detailed info
@@ -262,7 +287,7 @@ export class SubmissionsService {
       type: NotificationType.REVISION_SUBMITTED,
       title: 'Revised Manuscript Received',
       message: `Revised version of "${submission.title}" submitted by ${author.firstName} ${author.lastName}`,
-      actionUrl: `/dashboard/editorial/submissions/${submissionId}`,
+      actionUrl: `/dashboard/editorial`,
       priority: 'high',
     });
 
@@ -303,6 +328,94 @@ export class SubmissionsService {
       accepted: submissions.filter(s => s.status === ArticleStatus.ACCEPTED).length,
       published: submissions.filter(s => s.status === ArticleStatus.PUBLISHED).length,
       rejected: submissions.filter(s => s.status === ArticleStatus.REJECTED).length,
+    };
+  }
+
+  async getEditorialQueue(): Promise<any[]> {
+    const submissions = await this.articleModel
+      .find({
+        status: {
+          $in: [
+            ArticleStatus.SUBMITTED,
+            ArticleStatus.UNDER_REVIEW,
+            ArticleStatus.REVISION_REQUESTED,
+          ],
+        },
+      })
+      .populate('assignedReviewers', 'firstName lastName email status')
+      .sort({ submissionDate: 1, createdAt: 1 })
+      .lean()
+      .exec();
+
+    return submissions.map((submission: any) => ({
+      ...submission,
+      articleId: submission._id,
+      articleTitle: submission.title,
+      authorName: submission.authors?.length
+        ? submission.authors
+            .map((author: any) => `${author.firstName} ${author.lastName}`.trim())
+            .join(', ')
+        : 'Unknown author',
+      submittedDate: submission.submissionDate || submission.createdAt,
+      recommendationsCount: 0,
+      priority: 'normal',
+    }));
+  }
+
+  async getEditorialStats() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const [assignedSubmissions, pendingDecisions, activeReviewers, completedToday] =
+      await Promise.all([
+        this.articleModel.countDocuments({
+          status: {
+            $in: [ArticleStatus.SUBMITTED, ArticleStatus.UNDER_REVIEW, ArticleStatus.REVISION_REQUESTED],
+          },
+        }),
+        this.articleModel.countDocuments({ status: ArticleStatus.UNDER_REVIEW }),
+        this.userModel.countDocuments({ role: 'reviewer', status: 'active' }),
+        this.articleModel.countDocuments({
+          status: { $in: [ArticleStatus.ACCEPTED, ArticleStatus.REJECTED] },
+          updatedAt: { $gte: startOfToday },
+        }),
+      ]);
+
+    const processed = await this.articleModel
+      .find({
+        submissionDate: { $exists: true },
+        updatedAt: { $exists: true },
+        status: { $in: [ArticleStatus.ACCEPTED, ArticleStatus.REJECTED] },
+      })
+      .select('submissionDate updatedAt')
+      .lean()
+      .exec();
+
+    const avgProcessingTime = processed.length
+      ? Math.round(
+          processed.reduce(
+            (sum: number, item: any) =>
+              sum +
+              Math.max(
+                0,
+                (new Date(item.updatedAt).getTime() - new Date(item.submissionDate).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            0,
+          ) / processed.length,
+        )
+      : 0;
+
+    return {
+      total: assignedSubmissions,
+      inQueue: assignedSubmissions,
+      assignedSubmissions,
+      pendingDecisions,
+      activeReviewers,
+      completedToday,
+      avgProcessingTime,
+      avgResponseTime: avgProcessingTime,
+      qualityIssues: 0,
     };
   }
 }

@@ -4,12 +4,15 @@ import { Model, Types } from 'mongoose';
 import { Notification, NotificationDocument, NotificationType } from './schemas/notification.schema';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { User, UserDocument, UserRole, UserStatus } from '../users/schemas/user.schema';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
   ) {}
 
   async create(createNotificationDto: CreateNotificationDto) {
@@ -189,7 +192,7 @@ export class NotificationsService {
   }
 
   async notifyEditorialTeam(notificationData: {
-    type: string;
+    type: NotificationType;
     title: string;
     message: string;
     actionUrl: string;
@@ -197,36 +200,40 @@ export class NotificationsService {
     relatedArticleId?: string;
     metadata?: any;
   }) {
-    // In production, this would:
-    // 1. Query for all users with editorial roles (editor, associate editor, etc.)
-    // 2. Create notifications for each editorial team member
-    // 3. Send email alerts for high/urgent priority items
-    
-    // For now, log the notification
-    // This method should be enhanced to fetch editorial team members from User model
-    console.log('Editorial team notification:', notificationData);
-    
-    // Placeholder: In a real implementation, fetch editorial users and create notifications
-    // const editorialUsers = await this.userModel.find({ 
-    //   role: { $in: ['editor', 'associate_editor', 'editorial_board'] } 
-    // });
-    // 
-    // for (const user of editorialUsers) {
-    //   await this.create({
-    //     userId: user._id.toString(),
-    //     type: notificationData.type,
-    //     title: notificationData.title,
-    //     message: notificationData.message,
-    //     actionUrl: notificationData.actionUrl,
-    //     relatedArticleId: notificationData.relatedArticleId,
-    //     metadata: { ...notificationData.metadata, priority: notificationData.priority },
-    //   });
-    // }
+    const editorialUsers = await this.userModel
+      .find({
+        role: {
+          $in: [
+            UserRole.ADMIN,
+            UserRole.EDITOR_IN_CHIEF,
+            UserRole.ASSOCIATE_EDITOR,
+            UserRole.EDITORIAL_BOARD,
+            UserRole.EDITORIAL_ASSISTANT,
+          ],
+        },
+        status: UserStatus.ACTIVE,
+      })
+      .select('_id')
+      .lean();
+
+    await Promise.all(
+      editorialUsers.map(user =>
+        this.create({
+          userId: user._id.toString(),
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          actionUrl: notificationData.actionUrl,
+          relatedArticleId: notificationData.relatedArticleId,
+          metadata: { ...notificationData.metadata, priority: notificationData.priority },
+        }),
+      ),
+    );
 
     return {
       success: true,
       message: 'Editorial team notified',
-      ...notificationData,
+      notifiedCount: editorialUsers.length,
     };
   }
 }

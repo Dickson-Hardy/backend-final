@@ -100,9 +100,18 @@ export class UsersService {
       throw new NotFoundException('User not found')
     }
 
-    // Check if user can update this profile
-    if (user._id.toString() !== requesterId) {
-      // Add role-based permission check here if needed
+    const requester = await this.userModel.findById(requesterId)
+    if (!requester) {
+      throw new ForbiddenException('Requester not found')
+    }
+
+    if (user._id.toString() !== requesterId && requester.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('You can only update your own profile')
+    }
+
+    if (requester.role !== UserRole.ADMIN) {
+      delete (updateUserDto as any).role
+      delete (updateUserDto as any).status
     }
 
     let imageUpload = user.profileImage

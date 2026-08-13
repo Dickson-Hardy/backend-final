@@ -129,6 +129,22 @@ export class Article {
 
   @Prop()
   revisionNotes: string
+
+  @Prop()
+  resubmissionDate: Date
+
+  @Prop({ default: 0 })
+  revisionCount: number
+
+  @Prop({ type: Object, default: {} })
+  metadata: {
+    recommendedReviewers?: Array<Record<string, any>>
+    submittedBy?: Record<string, any>
+    submissionIp?: string
+    submissionDate?: Date
+    lastRevisionDate?: Date
+    revisionHistory?: Array<Record<string, any>>
+  }
 }
 
 export const ArticleSchema = SchemaFactory.createForClass(Article)
