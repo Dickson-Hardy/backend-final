@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
 import { Article, ArticleDocument, ArticleStatus } from './schemas/article.schema'
@@ -30,6 +30,50 @@ export class ArticlesService {
     files: { manuscript?: Express.Multer.File[]; supplementary?: Express.Multer.File[] },
     userRole?: string
   ): Promise<Article> {
+    const duplicateCheck = await this.checkDuplicateByTitle(createArticleDto.title)
+    if (duplicateCheck.isDuplicate) {
+      throw new ConflictException({
+        code: 'DUPLICATE_ARTICLE',
+        message: 'An article with this title already exists. Open the existing record instead of uploading it again.',
+        duplicate: duplicateCheck.article,
+      })
+    }
+
+    let volumeId: Types.ObjectId | undefined
+    let articleNumber: string | undefined
+    if (userRole === 'admin') {
+      if (!createArticleDto.volume) {
+        throw new BadRequestException('A volume is required for an admin publication upload')
+      }
+      if (!Types.ObjectId.isValid(createArticleDto.volume)) {
+        throw new BadRequestException('The selected volume is invalid')
+      }
+
+      volumeId = new Types.ObjectId(createArticleDto.volume)
+      const volume = await this.volumeModel.findById(volumeId)
+      if (!volume) {
+        throw new NotFoundException('Selected volume not found')
+      }
+
+      const numberedArticles = await this.articleModel
+        .find({ volume: volumeId, articleNumber: { $exists: true, $ne: '' } })
+        .select('articleNumber')
+        .lean()
+      const occupiedNumbers = new Set(
+        numberedArticles
+          .map((item: any) => Number.parseInt(item.articleNumber, 10))
+          .filter((number: number) => Number.isFinite(number) && number > 0),
+      )
+      let nextNumber = 1
+      while (occupiedNumbers.has(nextNumber)) nextNumber += 1
+      articleNumber = String(nextNumber).padStart(3, '0')
+    } else if (createArticleDto.volume) {
+      if (!Types.ObjectId.isValid(createArticleDto.volume)) {
+        throw new BadRequestException('The selected volume is invalid')
+      }
+      volumeId = new Types.ObjectId(createArticleDto.volume)
+    }
+
     // Upload manuscript file
     const manuscriptUpload = await this.uploadService.uploadManuscript(files.manuscript[0])
     
@@ -50,31 +94,6 @@ export class ArticlesService {
     if (userRole === 'admin') {
       articleStatus = ArticleStatus.PUBLISHED
       publishDate = new Date()
-    }
-
-    // Convert volume string to ObjectId if provided
-    const volumeId = createArticleDto.volume 
-      ? new Types.ObjectId(createArticleDto.volume) 
-      : undefined
-
-    let articleNumber: string | undefined
-    if (userRole === 'admin') {
-      if (!volumeId) {
-        throw new BadRequestException('A volume is required for an admin publication upload')
-      }
-      const volume = await this.volumeModel.findById(volumeId)
-      if (!volume) {
-        throw new NotFoundException('Selected volume not found')
-      }
-      const numberedArticles = await this.articleModel
-        .find({ volume: volumeId, articleNumber: { $exists: true, $ne: '' } })
-        .select('articleNumber')
-        .lean()
-      const nextNumber = numberedArticles.reduce(
-        (highest, item: any) => Math.max(highest, Number.parseInt(item.articleNumber, 10) || 0),
-        0,
-      ) + 1
-      articleNumber = String(nextNumber).padStart(3, '0')
     }
 
     const article = new this.articleModel({
@@ -112,6 +131,25 @@ export class ArticlesService {
     }
     
     return savedArticle
+  }
+
+  async checkDuplicateByTitle(title: string) {
+    const normalizedTitle = title?.trim().replace(/\s+/g, ' ')
+    if (!normalizedTitle) {
+      return { isDuplicate: false, article: null }
+    }
+
+    const flexibleTitle = escapeRegex(normalizedTitle).replace(/\s+/g, '\\s+')
+    const article = await this.articleModel
+      .findOne({ title: { $regex: `^\\s*${flexibleTitle}\\s*$`, $options: 'i' } })
+      .select('title status articleNumber volume authors submissionDate')
+      .populate('volume', 'volume issue year title')
+      .lean()
+
+    return {
+      isDuplicate: Boolean(article),
+      article: article || null,
+    }
   }
 
   async findAll(
@@ -561,6 +599,13 @@ export class ArticlesService {
     filters: { search?: string; category?: string; status?: string } = {}
   ) {
     const query: any = {}
+
+    if (volumeId) {
+      if (!Types.ObjectId.isValid(volumeId)) {
+        throw new BadRequestException('The selected volume is invalid')
+      }
+      query.volume = { $ne: new Types.ObjectId(volumeId) }
+    }
     
     // Apply filters
     if (filters.status && filters.status !== 'all') {
@@ -583,6 +628,7 @@ export class ArticlesService {
 
     const articles = await this.articleModel
       .find(query)
+      .populate('volume', 'volume issue year title status')
       .sort({ submissionDate: -1 })
       .limit(50)
       .exec()

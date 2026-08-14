@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import { Model, Types } from "mongoose"
 import { Volume, VolumeDocument } from "./schemas/volume.schema"
@@ -20,13 +20,28 @@ export class VolumesService {
   }
 
   async create(createVolumeDto: CreateVolumeDto, userRole?: string): Promise<Volume> {
-    // Determine volume status based on user role
-    let volumeStatus = createVolumeDto.status || 'draft'
-    
-    // If created by admin, automatically publish
-    if (userRole === 'admin' && volumeStatus === 'draft') {
-      volumeStatus = 'published'
+    const duplicateQuery: any = { volume: createVolumeDto.volume }
+    if (createVolumeDto.issue !== undefined) {
+      duplicateQuery.$or = [
+        { issue: createVolumeDto.issue },
+        { issue: { $exists: false } },
+        { issue: null },
+      ]
     }
+
+    const duplicate = await this.volumeModel
+      .findOne(duplicateQuery)
+      .select('volume issue year title status')
+      .lean()
+    if (duplicate) {
+      throw new ConflictException({
+        code: 'DUPLICATE_VOLUME',
+        message: `Volume ${createVolumeDto.volume}${createVolumeDto.issue !== undefined ? `, Issue ${createVolumeDto.issue}` : ''} already exists. Open the existing volume instead.`,
+        duplicate,
+      })
+    }
+
+    const volumeStatus = createVolumeDto.status || 'draft'
     
     const volumeData = {
       ...createVolumeDto,
@@ -92,8 +107,37 @@ export class VolumesService {
       throw new BadRequestException(`Invalid volume ID: ${id}`)
     }
     
+    const existingVolume = await this.volumeModel.findById(id)
+    if (!existingVolume) {
+      throw new NotFoundException(`Volume with ID ${id} not found`)
+    }
+
+    if (updateVolumeDto.volume !== undefined || Object.prototype.hasOwnProperty.call(updateVolumeDto, 'issue')) {
+      const volumeNumber = updateVolumeDto.volume ?? existingVolume.volume
+      const issueNumber = Object.prototype.hasOwnProperty.call(updateVolumeDto, 'issue')
+        ? updateVolumeDto.issue
+        : existingVolume.issue
+      const duplicateQuery: any = { _id: { $ne: new Types.ObjectId(id) }, volume: volumeNumber }
+      if (issueNumber !== undefined && issueNumber !== null) {
+        duplicateQuery.$or = [{ issue: issueNumber }, { issue: { $exists: false } }, { issue: null }]
+      }
+      const duplicate = await this.volumeModel.findOne(duplicateQuery).select('volume issue title').lean()
+      if (duplicate) {
+        throw new ConflictException({
+          code: 'DUPLICATE_VOLUME',
+          message: `Volume ${volumeNumber}${issueNumber !== undefined ? `, Issue ${issueNumber}` : ''} already exists.`,
+          duplicate,
+        })
+      }
+    }
+
+    const updateData: any = { ...updateVolumeDto }
+    if (updateVolumeDto.status === 'published' && !updateVolumeDto.publishDate && !existingVolume.publishDate) {
+      updateData.publishDate = new Date()
+    }
+
     const updatedVolume = await this.volumeModel
-      .findByIdAndUpdate(id, updateVolumeDto, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true })
       .populate("articles")
       .populate("editor", "firstName lastName email")
       .exec()
@@ -102,7 +146,23 @@ export class VolumesService {
       throw new NotFoundException(`Volume with ID ${id} not found`)
     }
 
-    return updatedVolume
+    if (updateVolumeDto.status === 'published' && existingVolume.status !== 'published') {
+      const now = new Date()
+      await this.articleModel.updateMany(
+        { volume: new Types.ObjectId(id) },
+        [{ $set: { status: 'published', publishDate: { $ifNull: ['$publishDate', now] } } }],
+      )
+    } else if (
+      existingVolume.status === 'published' &&
+      (updateVolumeDto.status === 'draft' || updateVolumeDto.status === 'in_progress')
+    ) {
+      await this.articleModel.updateMany(
+        { volume: new Types.ObjectId(id), status: 'published' },
+        { $set: { status: 'accepted' }, $unset: { publishDate: 1 } },
+      )
+    }
+
+    return this.findOne(id)
   }
 
   async remove(id: string): Promise<void> {
@@ -111,10 +171,25 @@ export class VolumesService {
       throw new BadRequestException(`Invalid volume ID: ${id}`)
     }
     
-    const result = await this.volumeModel.findByIdAndDelete(id).exec()
-    if (!result) {
+    const volume = await this.volumeModel.findById(id).select('_id').lean()
+    if (!volume) {
       throw new NotFoundException(`Volume with ID ${id} not found`)
     }
+
+    await this.articleModel.updateMany(
+      { volume: new Types.ObjectId(id) },
+      [
+        {
+          $set: {
+            status: {
+              $cond: [{ $eq: ['$status', 'published'] }, 'accepted', '$status'],
+            },
+          },
+        },
+        { $unset: ['volume', 'articleNumber', 'publishDate'] },
+      ],
+    )
+    await this.volumeModel.findByIdAndDelete(id).exec()
   }
 
   async incrementViewCount(id: string): Promise<void> {
@@ -205,8 +280,13 @@ export class VolumesService {
       throw new BadRequestException(`Invalid volume ID: ${volumeId}`)
     }
     
+    const uniqueArticleIds = [...new Set(articleIds)]
+    if (uniqueArticleIds.length === 0) {
+      throw new BadRequestException('Select at least one article to assign')
+    }
+
     // Validate article ObjectIds
-    for (const articleId of articleIds) {
+    for (const articleId of uniqueArticleIds) {
       if (!articleId || articleId === 'undefined' || articleId === 'null' || !Types.ObjectId.isValid(articleId)) {
         throw new BadRequestException(`Invalid article ID: ${articleId}`)
       }
@@ -217,25 +297,67 @@ export class VolumesService {
       throw new NotFoundException(`Volume with ID ${volumeId} not found`)
     }
 
-    // Add articles to volume
-    await this.volumeModel.findByIdAndUpdate(
-      volumeId,
-      { $addToSet: { articles: { $each: articleIds } } }
-    )
-
-    // Update articles to reference this volume
-    const updateData: any = { volume: volumeId }
-    
-    // If volume is published, automatically publish the articles
-    if (volume.status === 'published') {
-      updateData.status = 'published'
-      updateData.publishDate = new Date()
+    const objectIds = uniqueArticleIds.map(id => new Types.ObjectId(id))
+    const articles = await this.articleModel.find({ _id: { $in: objectIds } }).exec()
+    if (articles.length !== uniqueArticleIds.length) {
+      const foundIds = new Set(articles.map(article => article._id.toString()))
+      const missingIds = uniqueArticleIds.filter(id => !foundIds.has(id))
+      throw new NotFoundException(`Article${missingIds.length > 1 ? 's' : ''} not found: ${missingIds.join(', ')}`)
     }
 
-    await this.articleModel.updateMany(
-      { _id: { $in: articleIds } },
-      updateData
+    const existingNumberedArticles = await this.articleModel
+      .find({
+        volume: new Types.ObjectId(volumeId),
+        _id: { $nin: objectIds },
+        articleNumber: { $exists: true, $ne: '' },
+      })
+      .select('articleNumber')
+      .lean()
+    const occupiedNumbers = new Set(
+      existingNumberedArticles
+        .map((article: any) => Number.parseInt(article.articleNumber, 10))
+        .filter((number: number) => Number.isFinite(number) && number > 0),
     )
+
+    const now = new Date()
+    const operations = articles.map(article => {
+      let articleNumber = Number.parseInt(article.articleNumber, 10)
+      if (!Number.isFinite(articleNumber) || articleNumber < 1 || occupiedNumbers.has(articleNumber)) {
+        articleNumber = 1
+        while (occupiedNumbers.has(articleNumber)) articleNumber += 1
+      }
+      occupiedNumbers.add(articleNumber)
+
+      const $set: Record<string, any> = {
+        volume: new Types.ObjectId(volumeId),
+        articleNumber: String(articleNumber).padStart(3, '0'),
+      }
+      const $unset: Record<string, 1> = {}
+      if (volume.status === 'published') {
+        $set.status = 'published'
+        $set.publishDate = article.publishDate || now
+      } else if (article.status === 'published') {
+        $set.status = 'accepted'
+        $unset.publishDate = 1
+      }
+
+      return {
+        updateOne: {
+          filter: { _id: article._id },
+          update: Object.keys($unset).length ? { $set, $unset } : { $set },
+        },
+      }
+    })
+
+    // An article belongs to one volume only. Remove stale references before adding it here.
+    await this.volumeModel.updateMany(
+      { _id: { $ne: new Types.ObjectId(volumeId) } },
+      { $pull: { articles: { $in: objectIds } } },
+    )
+    await this.articleModel.bulkWrite(operations)
+    await this.volumeModel.findByIdAndUpdate(volumeId, {
+      $addToSet: { articles: { $each: objectIds } },
+    })
 
     return this.findOne(volumeId)
   }
@@ -262,11 +384,19 @@ export class VolumesService {
       { $pull: { articles: articleId } }
     )
 
-    // Remove volume reference from article
-    await this.articleModel.findByIdAndUpdate(
-      articleId,
-      { $unset: { volume: 1 } }
-    )
+    const article = await this.articleModel.findById(articleId)
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${articleId} not found`)
+    }
+
+    if (article.volume?.toString() === volumeId) {
+      const update: any = { $unset: { volume: 1, articleNumber: 1 } }
+      if (article.status === 'published') {
+        update.$set = { status: 'accepted' }
+        update.$unset.publishDate = 1
+      }
+      await this.articleModel.findByIdAndUpdate(articleId, update)
+    }
 
     return this.findOne(volumeId)
   }

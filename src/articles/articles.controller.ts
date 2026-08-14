@@ -158,6 +158,15 @@ export class ArticlesController {
     return this.articlesService.getStatistics()
   }
 
+  @Get('duplicate-check')
+  @UseGuards(JwtAuthGuard)
+  async checkDuplicate(@Query('title') title?: string) {
+    if (!title?.trim()) {
+      throw new BadRequestException('Article title is required for duplicate checking')
+    }
+    return this.articlesService.checkDuplicateByTitle(title)
+  }
+
   @Get('volume/:volumeNumber')
   async findByVolume(@Param('volumeNumber') volumeNumber: string) {
     return this.articlesService.findByVolume(parseInt(volumeNumber, 10))
@@ -186,6 +195,8 @@ export class ArticlesController {
   }
 
   @Get('available-for-volume')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR_IN_CHIEF)
   async findAvailableForVolume(
     @Query('volumeId') volumeId?: string,
     @Query('search') search?: string,
