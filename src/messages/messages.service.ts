@@ -15,7 +15,7 @@ export class MessagesService {
 
   async create(createMessageDto: CreateMessageDto, senderId: string, senderName: string, senderRole: string) {
     // Fetch recipient info from users service
-    const recipient = await this.usersService.findById(createMessageDto.recipientId);
+    const recipient = await this.usersService.findOne(createMessageDto.recipientId);
     
     const message = new this.messageModel({
       ...createMessageDto,
@@ -117,7 +117,7 @@ export class MessagesService {
     relatedArticleTitle?: string,
   ) {
     // Fetch recipient info from users service
-    const recipient = await this.usersService.findById(recipientId);
+    const recipient = await this.usersService.findOne(recipientId);
     
     const systemMessage = new this.messageModel({
       senderId: new Types.ObjectId('000000000000000000000000'), // System user ID

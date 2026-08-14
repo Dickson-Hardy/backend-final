@@ -181,7 +181,7 @@ export class VolumesService {
       .findById(id)
       .populate({
         path: 'articles',
-        select: 'title abstract authors submissionDate status categories type keywords'
+        select: 'title abstract content authors submissionDate publishDate status categories type keywords articleNumber doi pages manuscriptFile supplementaryFiles featured viewCount downloadCount volume'
       })
       .exec()
     
@@ -190,7 +190,7 @@ export class VolumesService {
       const articleIds = volume.articles as any[]
       const articles = await this.articleModel
         .find({ _id: { $in: articleIds } })
-        .select('title abstract authors submissionDate status categories type keywords')
+        .select('title abstract content authors submissionDate publishDate status categories type keywords articleNumber doi pages manuscriptFile supplementaryFiles featured viewCount downloadCount volume')
         .exec()
       
       return articles

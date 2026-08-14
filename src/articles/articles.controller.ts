@@ -14,6 +14,8 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import { FileFieldsInterceptor } from '@nestjs/platform-express'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 import { ArticlesService } from './articles.service'
 import { CreateArticleDto } from './dto/create-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
@@ -58,7 +60,7 @@ export class ArticlesController {
       throw new BadRequestException('Invalid JSON in keywords, authors, categories, or references')
     }
 
-    const createArticleDto: CreateArticleDto = {
+    const createArticleDto = plainToInstance(CreateArticleDto, {
       title: body.title,
       abstract: body.abstract,
       content: body.content,
@@ -72,6 +74,15 @@ export class ArticlesController {
       acknowledgments: body.acknowledgments,
       conflictOfInterest: body.conflictOfInterest,
       references,
+    })
+
+    const validationErrors = await validate(createArticleDto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+    if (validationErrors.length > 0) {
+      const messages = validationErrors.flatMap(error => Object.values(error.constraints || {}))
+      throw new BadRequestException(messages.length ? messages : 'Invalid article metadata')
     }
     
     

@@ -8,11 +8,16 @@ async function bootstrap() {
 
   // Enable CORS for frontend communication
   const isProduction = process.env.NODE_ENV === 'production'
+  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean)
   
   // Production origins - update these with your actual domains
   const productionOrigins = [
     'https://amhsj.org',
     'https://www.amhsj.org',
+    ...configuredOrigins,
     process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_WWW, // For www subdomain
     process.env.FRONTEND_URL_ADMIN, // For admin subdomain if needed
@@ -25,9 +30,12 @@ async function bootstrap() {
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:3001", // For testing
+    "http://localhost:3004",
+    "http://127.0.0.1:3004",
+    ...configuredOrigins,
   ]
 
-  const allowedOrigins = isProduction ? productionOrigins : developmentOrigins
+  const allowedOrigins = Array.from(new Set(isProduction ? productionOrigins : developmentOrigins))
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -47,10 +55,7 @@ async function bootstrap() {
           callback(new Error(`Origin ${origin} not allowed by CORS policy`))
         }
       } else {
-        // Development: Allow requests with no origin (like Postman, curl)
-        if (!origin) return callback(null, true)
-        
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin.replace(/\/$/, ''))) {
           callback(null, true)
         } else {
           console.warn(`🚫 CORS blocked request from origin: ${origin}`)
